@@ -58,82 +58,29 @@ class GDocFS(fuse.Fuse):
 	
 	def getattr(self, path):
 		"""
-        - st_mode (protection bits)
-        - st_ino (inode number)
-        - st_dev (device)
-        - st_nlink (number of hard links)
-        - st_uid (user ID of owner)
-        - st_gid (group ID of owner)
-        - st_size (size of file, in bytes)
-        - st_atime (time of most recent access)
-        - st_mtime (time of most recent content modification)
-        - st_ctime (platform dependent; time of most recent metadata change on Unix,
-                    or the time of creation on Windows).
+		Purpose: Get information about a file
+		Args:
+			path: Path to file
+		Returns: a GStat object with some updated values
         """
         st = GStat()
-        pe = path.split('/')[1:]
+        pe = path.split('/')[1:] #Leave this for now, see how it goes
+        
+        #Set access times to now
         st.st_atime = int(time())
         st.st_mtime = st.st_atime
         st.st_ctime = st.st_atime
         
-
-	def getdir(self, path):
-		"""
-        return: [[('file1', 0), ('file2', 0), ... ]]
-        """
-		pass
-
-	def chmod(self, path, mode):
-		pass
-	
-	def chown(self, path, uid, gid):
-		pass
-		
-	def fsync(self, path, isFsyncFile):
-		pass
-		
-	def link(self, targetPath, linkPath):
-		pass
-		
-	def mkdir(self, path, mode):
-		pass
-		
-	def mknod(self, path, mode, dev):
-		pass
-		
-	def open(self, path, flags):
-		pass
-		
-	def read(self, path, length, offset):
-		pass
-	
-	def readlink(self, path):
-		pass
-		
-	def release(self, path, flags):
-		pass
-		
-	def rename(self, oldPath, newPath):
-		pass
-		
-	def rmdir(self, path):
-		pass
-		
-	def statfs(self):
-		pass
-		
-	def truncate(self, path, size):
-		pass
-		
-	def unlink(self, path):
-		pass
-		
-	def utime(self, path, times):
-		pass
-		
-	def write(self, path, buf, offset):
-		pass
-	
+        #Check for existence of file
+        if path == '/':
+        	pass
+        else:
+        	return -errno.ENOENT
+        return st
+        
+      def readdir(self, path, offset):
+      	dirents = ['.', '..']
+      	#IMPLEMENT: Add file listing
 	
 
 def main():

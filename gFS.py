@@ -22,46 +22,47 @@ import fuse
 import stat
 import os
 import errno
+import gNet
 
 from time import time
 from subprocess import *
 
 fuse.fuse_python_api = (0,2)
 
-class GStat(fuse.stat):
-	"""
-	The stat class to use for getattr
-	"""
-	def __init__(self):
-		self.st_mode = stat.S_IFDIR || 0755
-		self.st_ino = 0
-		self.st_dev = 0
-		self.st_nlink = 2
-		self.st_uid = stat.ST_UID
-		self.st_gid = stat.ST_GID
-		self.st_size = 4096
-		self.st_atime = 0
-		self.st_mtime = 0
-		self.st_ctime = 0
-		
+class GStat(object):
+    """
+    The stat class to use for getattr
+    """
+    def __init__(self):
+        self.st_mode = stat.S_IFDIR | 0755 # Might change with or, see what actually works
+        self.st_ino = 0
+        self.st_dev = 0
+        self.st_nlink = 2
+        self.st_uid = stat.ST_UID
+        self.st_gid = stat.ST_GID
+        self.st_size = 4096
+        self.st_atime = 0
+        self.st_mtime = 0
+        self.st_ctime = 0
+        
 		
 class GDocFS(fuse.Fuse):
-	""" 
-	The main Google Docs filesystem class. Most work will be done
-	in here.
-	"""
-	def __init__(self, *args, **kw):
-		""" 
-		Connect to the Google Docs Server and verify credentials
-		"""
-		fuse.Fuse.__init__(self, *args, **kw)
+    """ 
+    The main Google Docs filesystem class. Most work will be done
+    in here.
+    """
+    def __init__(self, *args, **kw):
+        """ 
+        Connect to the Google Docs Server and verify credentials
+        """
+        fuse.Fuse.__init__(self, *args, **kw)
 	
-	def getattr(self, path):
-		"""
-		Purpose: Get information about a file
-		Args:
-			path: Path to file
-		Returns: a GStat object with some updated values
+    def getattr(self, path):
+        """
+        Purpose: Get information about a file
+        Args:
+            path: Path to file
+        Returns: a GStat object with some updated values
         """
         st = GStat()
         pe = path.split('/')[1:] #Leave this for now, see how it goes
@@ -73,19 +74,20 @@ class GDocFS(fuse.Fuse):
         
         #Check for existence of file
         if path == '/':
-        	pass
+            pass
         else:
-        	return -errno.ENOENT
+            return -errno.ENOENT
+		
         return st
         
-      def readdir(self, path, offset):
-      	dirents = ['.', '..']
-      	#IMPLEMENT: Add file listing
+    def readdir(self, path, offset):
+        dirents = ['.', '..']
+        #IMPLEMENT: Add file listing
 	
 
 def main():
-	
-	return 0
+    
+    return 0
 
 if __name__ == '__main__':
-	main()
+    main()

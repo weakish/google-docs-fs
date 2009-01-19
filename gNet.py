@@ -26,6 +26,18 @@ class GNet:
     Performs all the main interfacing with Google Docs server as well
     as storing the user's session data
     """
+    def __init__(self, em, pw):
+        """
+        Purpose: Login to Google Docs and store the session cookie
+        em: The user's email address
+        pw: The user's password
+        Returns: Nothing
+        """
+        self.gd_client = gdata.docs.service.DocsService()
+        self.gd_client.email = em
+        self.gd_client.password = ps
+        self.gd_client.source = 'google-docs-fs' # Perhaps set a number after this?
+        self.gd_client.ProgrammaticLogin()
     
 
 def main():

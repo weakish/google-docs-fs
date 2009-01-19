@@ -51,11 +51,17 @@ class GDocFS(fuse.Fuse):
     The main Google Docs filesystem class. Most work will be done
     in here.
     """
-    def __init__(self, *args, **kw):
+    def __init__(self, em, pw, *args, **kw):
         """ 
-        Connect to the Google Docs Server and verify credentials
+        Purpose: Connect to the Google Docs Server and verify credentials
+        em: User's email address
+        pw: User's password
+        *args: Args to pass to Fuse
+        **kw: Keywords to pass to Fuse
+        Returns: Nothing
         """
         fuse.Fuse.__init__(self, *args, **kw)
+        self.doc_client = GNet(em, pw)
 	
     def getattr(self, path):
         """
@@ -81,6 +87,12 @@ class GDocFS(fuse.Fuse):
         return st
         
     def readdir(self, path, offset):
+        """
+        Purpose: Give a listing for ls
+        path: Path to the file/directory
+        offset: Included for compatibility. Does nothing
+        Returns: Directory listing
+        """
         dirents = ['.', '..']
         #IMPLEMENT: Add file listing
 	

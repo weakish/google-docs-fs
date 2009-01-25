@@ -34,7 +34,11 @@ class GStat(object):
     The stat class to use for getattr
     """
     def __init__(self):
-        self.st_mode = stat.S_IFDIR | 0755 # Might change with or, see what actually works
+        """
+        Purpose: Ripped straight from the Fuse SimpleFileSystemHowto wiki
+        Returns: Nothing
+        """
+        self.st_mode = stat.S_IFDIR or 0755 # Might change with |, see what actually works
         self.st_ino = 0
         self.st_dev = 0
         self.st_nlink = 2
@@ -78,12 +82,6 @@ class GDocFS(fuse.Fuse):
         st.st_mtime = st.st_atime
         st.st_ctime = st.st_atime
         
-        #Check for existence of file
-        if path == '/':
-            pass
-        else:
-            return -errno.ENOENT
-		
         return st
         
     def readdir(self, path, offset):

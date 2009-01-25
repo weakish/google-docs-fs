@@ -21,7 +21,7 @@
 import gdata.docs.service
 import gdata.docs
 
-class GNet:
+class GNet(object):
     """
     Performs all the main interfacing with Google Docs server as well
     as storing the user's session data
@@ -31,7 +31,7 @@ class GNet:
         Purpose: Login to Google Docs and store the session cookie
         em: The user's email address
         pw: The user's password
-        Returns: Nothing
+        Returns: A GNet object for accessing the GData Docs
         """
         self.gd_client = gdata.docs.service.DocsService()
         self.gd_client.email = em
@@ -39,6 +39,12 @@ class GNet:
         self.gd_client.source = 'google-docs-fs' # Perhaps set a number after this?
         self.gd_client.ProgrammaticLogin()
     
+    def get_docs(self):
+        """
+        Purpose: Retrieve a list of all documents
+        Returns: A list of all the user's documents
+        """
+        return self.gd_client.GetDocumentListFeed()
 
 def main():
 	

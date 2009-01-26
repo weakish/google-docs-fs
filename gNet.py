@@ -35,7 +35,7 @@ class GNet(object):
         """
         self.gd_client = gdata.docs.service.DocsService()
         self.gd_client.email = em
-        self.gd_client.password = ps
+        self.gd_client.password = pw
         self.gd_client.source = 'google-docs-fs' # Perhaps set a number after this?
         self.gd_client.ProgrammaticLogin()
     

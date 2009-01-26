@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 #
-#   gFS.py
+#   gFile.py
 #   
-#   Copyright 2008 Scott Walton <d38dm8nw81k1ng@gmail.com>
+#   Copyright 2008-2009 Scott Walton <d38dm8nw81k1ng@gmail.com>
 #       
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License (version 2), as
@@ -21,6 +21,7 @@
 import fuse
 import stat
 import os
+import sys
 import errno
 import gNet
 
@@ -50,7 +51,7 @@ class GStat(object):
         self.st_ctime = 0
         
 		
-class GDocFS(fuse.Fuse):
+class GFile(fuse.Fuse):
     """ 
     The main Google Docs filesystem class. Most work will be done
     in here.
@@ -65,7 +66,8 @@ class GDocFS(fuse.Fuse):
         Returns: Nothing
         """
         fuse.Fuse.__init__(self, *args, **kw)
-        self.doc_client = GNet(em, pw)
+        self.gn = gNet.GNet(em, pw)
+        
 	
     def getattr(self, path):
         """
@@ -92,11 +94,22 @@ class GDocFS(fuse.Fuse):
         Returns: Directory listing
         """
         dirents = ['.', '..']
-        #IMPLEMENT: Add file listing
-	
+        #Pray this works
+        for entry in self.gn.get_docs().entry:
+            dirents.extend(entry.title.text.encode('UTF-8'))
+            
+        for r in dirents:
+            yield fuse.Direntry(r)
+        #It didn't work...
 
 def main():
-    
+    usage = """Google Docs FS: Mounts Google Docs files on a local filesystem\n
+    gFile.py email password mountpoint
+    """ + fuse.Fuse.fusage
+    gfs = GFile(sys.argv[1], sys.argv[2], version = "%prog " + fuse.__version__,
+        usage = usage, dash_s_do='setsingle')
+    gfs.parse(errex=1)
+    gfs.main()
     return 0
 
 if __name__ == '__main__':

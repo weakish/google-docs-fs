@@ -93,23 +93,33 @@ class GFile(fuse.Fuse):
         offset: Included for compatibility. Does nothing
         Returns: Directory listing
         """
+
         dirents = ['.', '..']
-        #Pray this works
+        if path == '/':
+            dirents.extend(['documents','spreadsheets','presentations'])
+        
+        #Next step is to filter these into their appropriate directories
         for entry in self.gn.get_docs().entry:
-            dirents.extend(entry.title.text.encode('UTF-8'))
+            dirents.append(entry.title.text.encode('UTF-8'))
             
         for r in dirents:
             yield fuse.Direntry(r)
-        #It didn't work...
+
 
 def main():
-    usage = """Google Docs FS: Mounts Google Docs files on a local filesystem\n
+    """
+    Purpose: Mount the filesystem
+    Returns: 0 To indicate successful operation
+    """
+    
+    usage = """Google Docs FS: Mounts Google Docs files on a local filesystem
     gFile.py email password mountpoint
     """ + fuse.Fuse.fusage
     gfs = GFile(sys.argv[1], sys.argv[2], version = "%prog " + fuse.__version__,
         usage = usage, dash_s_do='setsingle')
     gfs.parse(errex=1)
     gfs.main()
+    
     return 0
 
 if __name__ == '__main__':

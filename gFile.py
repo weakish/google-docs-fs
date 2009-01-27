@@ -67,7 +67,12 @@ class GFile(fuse.Fuse):
         """
         fuse.Fuse.__init__(self, *args, **kw)
         self.gn = gNet.GNet(em, pw)
-            	
+        
+        self.directories = {'document': [], 'spreadsheet': [], 'presentation': []}
+        for filetype in ['document', 'spreadsheet', 'presentation']:
+            for doc in self.gn.get_docs([filetype]).entry:
+                self.directories[filetype].append(doc.title.text.encode('UTF-8'))
+            
     def getattr(self, path):
         """
         Purpose: Get information about a file
@@ -75,10 +80,20 @@ class GFile(fuse.Fuse):
         Returns: a GStat object with some updated values
         """
         st = GStat()
-        pe = path.split('/')[1:]
+        de = path.split('/')[1:]
         
-        # Set proper attributes for files and directories
-        # To be Implemented
+        #Set proper attributes for files and directories
+        #IMPLEMENT
+        if path == '/': # Root
+            pass
+        elif de[-1] in self.directories: # Is a directory
+           pass
+        elif de[-1] in self.directories[de[0]]: # Is a file
+            st.st_mode = stat.S_IFREG | 0744
+            st.st_nlink = 1
+            st.st_size = len(de[-1]) 
+        else:
+            return -errno.ENOENT    
         
         # Set access times to now - try and get actual access times off
         # gdata if possible
@@ -98,14 +113,10 @@ class GFile(fuse.Fuse):
 
         dirents = ['.', '..']
         if path == '/':
-            dirents.extend(['document','spreadsheet','presentation', 'starred'])
-        elif path == '/starred':
-            dirents.extend(['document','spreadsheet','presentation'])
+            dirents.extend(self.directories.keys())
         #Next step is to filter these into their appropriate directories
         else:
-            filetypes = path[1:].split('/')
-            for doc in self.gn.get_docs(filetypes).entry:
-                dirents.append(doc.title.text.encode('UTF-8'))
+            dirents.extend(self.directories[path[1:]])            
                 
         for r in dirents:
             yield fuse.Direntry(r)

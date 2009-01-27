@@ -39,12 +39,12 @@ class GStat(object):
         Purpose: Ripped straight from the Fuse SimpleFileSystemHowto wiki
         Returns: Nothing
         """
-        self.st_mode = stat.S_IFDIR or 0755 # Might change with |, see what actually works
+        self.st_mode = stat.S_IFDIR | 0744
         self.st_ino = 0
         self.st_dev = 0
         self.st_nlink = 2
-        self.st_uid = stat.ST_UID
-        self.st_gid = stat.ST_GID
+        self.st_uid = stat.ST_UID # Need to find out how to set these
+        self.st_gid = stat.ST_GID # two to be the UID/GID of the user
         self.st_size = 4096
         self.st_atime = 0
         self.st_mtime = 0
@@ -67,19 +67,21 @@ class GFile(fuse.Fuse):
         """
         fuse.Fuse.__init__(self, *args, **kw)
         self.gn = gNet.GNet(em, pw)
-        
-	
+            	
     def getattr(self, path):
         """
         Purpose: Get information about a file
-        Args:
-            path: Path to file
+        path: Path to file
         Returns: a GStat object with some updated values
         """
         st = GStat()
-        pe = path.split('/')[1:] #Leave this for now, see how it goes
+        pe = path.split('/')[1:]
         
-        #Set access times to now
+        # Set proper attributes for files and directories
+        # To be Implemented
+        
+        # Set access times to now - try and get actual access times off
+        # gdata if possible
         st.st_atime = int(time())
         st.st_mtime = st.st_atime
         st.st_ctime = st.st_atime
@@ -96,12 +98,15 @@ class GFile(fuse.Fuse):
 
         dirents = ['.', '..']
         if path == '/':
-            dirents.extend(['documents','spreadsheets','presentations'])
-        
+            dirents.extend(['document','spreadsheet','presentation', 'starred'])
+        elif path == '/starred':
+            dirents.extend(['document','spreadsheet','presentation'])
         #Next step is to filter these into their appropriate directories
-        for entry in self.gn.get_docs().entry:
-            dirents.append(entry.title.text.encode('UTF-8'))
-            
+        else:
+            filetypes = path[1:].split('/')
+            for doc in self.gn.get_docs(filetypes).entry:
+                dirents.append(doc.title.text.encode('UTF-8'))
+                
         for r in dirents:
             yield fuse.Direntry(r)
 
@@ -112,9 +117,9 @@ def main():
     Returns: 0 To indicate successful operation
     """
     
-    usage = """Google Docs FS: Mounts Google Docs files on a local filesystem
-    gFile.py email password mountpoint
-    """ + fuse.Fuse.fusage
+    usage = """Google Docs FS: Mounts Google Docs files on a local
+    filesystem gFile.py email password mountpoint""" + fuse.Fuse.fusage
+    
     gfs = GFile(sys.argv[1], sys.argv[2], version = "%prog " + fuse.__version__,
         usage = usage, dash_s_do='setsingle')
     gfs.parse(errex=1)

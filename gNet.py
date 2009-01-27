@@ -21,6 +21,9 @@
 import gdata.docs.service
 import gdata.docs
 
+
+
+
 class GNet(object):
     """
     Performs all the main interfacing with Google Docs server as well
@@ -47,7 +50,23 @@ class GNet(object):
         return self.gd_client.GetDocumentListFeed()
 
 def main():
-	
+    """
+    Purpose: Used for Testing Only
+    Returns: 0 to indicate successful execution
+    """
+    from sys import argv
+    
+    gn_test = GNet(argv[1], argv[2])
+    
+    #The following doesn't actually work the way I want it
+    #It's supposed to print out a list of ALL documents on the server
+    #but for some reason it only lists one. Need to test on other machines/
+    #accounts, see if I can work it out. Seems to work in gFile.py anyway...
+    feed = gn_test.get_docs()
+
+    for i, entry in enumerate(feed.entry):
+        print i, entry.title.text.encode('UTF-8')
+    
 	return 0
 
 if __name__ == '__main__':

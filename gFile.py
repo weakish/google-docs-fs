@@ -67,12 +67,8 @@ class GFile(fuse.Fuse):
         """
         fuse.Fuse.__init__(self, *args, **kw)
         self.gn = gNet.GNet(em, pw)
-        
         self.directories = {'document': [], 'spreadsheet': [], 'presentation': []}
-        for filetype in ['document', 'spreadsheet', 'presentation']:
-            for doc in self.gn.get_docs([filetype]).entry:
-                self.directories[filetype].append(doc.title.text.encode('UTF-8'))
-            
+                  
     def getattr(self, path):
         """
         Purpose: Get information about a file
@@ -112,11 +108,16 @@ class GFile(fuse.Fuse):
         """
 
         dirents = ['.', '..']
-        if path == '/':
+        de = path.split('/')[1:]
+        if path == '/': # Root
             dirents.extend(self.directories.keys())
-        #Next step is to filter these into their appropriate directories
-        else:
-            dirents.extend(self.directories[path[1:]])            
+        else:	# Directory
+        	for doc in self.gn.get_docs(de).entry:
+        	    # Only include if not already listed
+        		if doc.title.text.encode('UTF-8') not in self.directories[de[-1]]:
+        			self.directories[de[-1]].append(doc.title.text.encode('UTF-8'))
+        	
+        	dirents.extend(self.directories[path[1:]])            
                 
         for r in dirents:
             yield fuse.Direntry(r)

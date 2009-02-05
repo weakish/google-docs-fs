@@ -43,8 +43,8 @@ class GStat(object):
         self.st_ino = 0
         self.st_dev = 0
         self.st_nlink = 2
-        self.st_uid = stat.ST_UID # Need to find out how to set these
-        self.st_gid = stat.ST_GID # two to be the UID/GID of the user
+        self.st_uid = os.getuid()
+        self.st_gid = os.getgid()
         self.st_size = 4096
         self.st_atime = 0
         self.st_mtime = 0
@@ -96,6 +96,7 @@ class GFile(fuse.Fuse):
         
         # Set access times to now - try and get actual access times off
         # gdata if possible
+        # NOTE - It MUST be possible because gdata orders by access time
         st.st_atime = int(time())
         st.st_mtime = st.st_atime
         st.st_ctime = st.st_atime

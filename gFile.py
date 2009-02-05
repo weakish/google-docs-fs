@@ -56,6 +56,7 @@ class GFile(fuse.Fuse):
     The main Google Docs filesystem class. Most work will be done
     in here.
     """
+    
     def __init__(self, em, pw, *args, **kw):
         """ 
         Purpose: Connect to the Google Docs Server and verify credentials
@@ -65,30 +66,32 @@ class GFile(fuse.Fuse):
         **kw: Keywords to pass to Fuse
         Returns: Nothing
         """
+        
         fuse.Fuse.__init__(self, *args, **kw)
         self.gn = gNet.GNet(em, pw)
-        self.directories = {'document': [], 'spreadsheet': [], 'presentation': []}
-                  
+        self.directories = {}
+                          
     def getattr(self, path):
         """
         Purpose: Get information about a file
         path: Path to file
         Returns: a GStat object with some updated values
         """
+        
         st = GStat()
-        de = path.split('/')[1:]
+        pe = path.split('/')
         
         #Set proper attributes for files and directories
         #IMPLEMENT
         if path == '/': # Root
             pass
-        elif de[-1] in self.directories: # Is a directory
+        elif pe[-1] in self.directories: # Is a directory
            pass
-        elif de[-1] in self.directories[de[0]]: # Is a file
+        elif pe[-1] in self.directories[pe[-2]]: # Is a file
             st.st_mode = stat.S_IFREG | 0744
             st.st_nlink = 1
-            st.st_size = len(de[-1]) 
-        else:
+            st.st_size = len(pe[-1]) 
+        else: # Evidently, it must not exist
             return -errno.ENOENT    
         
         # Set access times to now - try and get actual access times off
@@ -104,23 +107,36 @@ class GFile(fuse.Fuse):
         Purpose: Give a listing for ls
         path: Path to the file/directory
         offset: Included for compatibility. Does nothing
-        Returns: Directory listing
+        Returns: Directory listing for ls
         """
 
         dirents = ['.', '..']
-        de = path.split('/')[1:]
+        pe = path.split('/')[1:]
+        
         if path == '/': # Root
-            dirents.extend(self.directories.keys())
-        else:	# Directory
-        	for doc in self.gn.get_docs(de).entry:
-        	    # Only include if not already listed
-        		if doc.title.text.encode('UTF-8') not in self.directories[de[-1]]:
-        			self.directories[de[-1]].append(doc.title.text.encode('UTF-8'))
-        	
-        	dirents.extend(self.directories[path[1:]])            
-                
+            excludes = []
+            self.directories[''] = []
+            for dir in self.gn.get_docs(filetypes = ['folder']).entry:
+                excludes.append('-' + dir.title.text.encode('UTF-8'))
+                self.directories[dir.title.text.encode('UTF-8')] = []
+            if len(excludes) > 0:
+                for doc in self.gn.get_docs(filetypes = excludes).entry:
+                    self.directories[''].append(doc.title.text.encode('UTF-8'))
+        else: #Directory
+            self.directories[pe[-1]] = []
+            for file in self.gn.get_docs(folder = pe[-1]).entry:
+                if file.category[0].label is 'folder':
+                    self.directories[file.title.text.encode('UTF-8')]
+                self.directories[pe[-1]].append(file.title.text.encode('UTF-8'))
+                       
+        for entry in self.directories[pe[-1]]:
+            dirents.append(entry)
+        
         for r in dirents:
             yield fuse.Direntry(r)
+            
+    def mknod(self, path, mode, dev):
+        pass
 
 
 def main():

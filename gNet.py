@@ -57,36 +57,54 @@ class GNet(object):
 
         return self.gd_client.Query(query.ToUri())
         
+    def get_file(self, pe, showfolders = 'false'):
+        """
+        Purpose: Retrieves the file referred to by path from Google
+        pe: A list containing the path elements of the file
+        showfolders: Either 'true' or 'false' - whether get_file
+                     should also retrieve folders (default: 'false')
+        Returns: The gdata List Entry object containing the file or -1 if none exists
+        """
+        query = gdata.docs.service.DocumentQuery()
+        query['title'] = pe[-1]
+        query['title-exact'] = 'true'
+        query['showfolders'] = showfolders
+        
+        feed = self.gd_client.Query(query.ToUri())
+        filter = []
+        # Filter out any files that don't match the case
+        for f in feed.entry:
+            if f.title.text.encode('UTF-8') == pe[-1]:
+                filter.append(f)
+                
+        # Return the first file encountered in the folder
+        # Fix this to be more precise in the final version
+        # Need to implement file extensions, then I should be able to
+        # check those to get the filetype and a more accurate file
+        # May also need to go through the entire file hierarchy to
+        # ensure the integrity of the path. May be slower but will be
+        # essential to ensure the user doesnt unwittingly erase a
+        # random file stored elsewhere
+        for entry in filter:
+            if pe[-2] is '' and len(entry.category) is 1:
+                return entry
+            elif pe[-2] in (entry.category[0].label, entry.category[1].label):
+                return entry
+        return -1
+        
+    def erase(self, file):
+        """
+        Purpose: Erase a file
+        file: A gdata entry object containing the file to erase
+        """
+        self.gd_client.Delete(file.GetEditLink().href)
+        ## TODO: Test Me!
 
 def main():
     """
     Purpose: Used for Testing Only. Alter it however you want.
     Returns: 0 to indicate successful execution
     """
-    
-    from sys import argv
-    gd_client = gdata.docs.service.DocsService()
-    gd_client.email = argv[1]
-    gd_client.password = argv[2]
-    gd_client.source = 'google-docs-fs'
-    gd_client.ProgrammaticLogin()
-    
-    q = gdata.docs.service.DocumentQuery(categories = None)
-    q['showfolders'] = 'true'
-    q['category'] = 'folder'
-    #q['category'] = '-test'
-    
-    feed = gd_client.Query(q.ToUri())
-
-    print '\n'
-    if(len(feed.entry) == 0):
-        print "No entries in feed.\n"
-    else:
-        #for i in feed.entry:
-        #    print i, "\n"
-        for i, entry in enumerate(feed.entry):
-            print '%s %s %s\n' % (i+1, entry.title.text.encode('UTF-8'), entry.category[0].label)
-        
     return 0 
 
 if __name__ == '__main__':

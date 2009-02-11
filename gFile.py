@@ -74,15 +74,14 @@ class GFile(fuse.Fuse):
     def getattr(self, path):
         """
         Purpose: Get information about a file
-        path: Path to file
+        path: String containing relative path to file using mountpoint as /
         Returns: a GStat object with some updated values
         """
         
         st = GStat()
         pe = path.split('/')
         
-        #Set proper attributes for files and directories
-        #IMPLEMENT
+        # Set proper attributes for files and directories
         if path == '/': # Root
             pass
         elif pe[-1] in self.directories: # Is a directory
@@ -96,17 +95,18 @@ class GFile(fuse.Fuse):
         
         # Set access times to now - try and get actual access times off
         # gdata if possible
-        # NOTE - It MUST be possible because gdata orders by access time
+        # NOTE - It SHOULD be possible because gdata orders by access time
         st.st_atime = int(time())
         st.st_mtime = st.st_atime
         st.st_ctime = st.st_atime
+        # Also need to get the sizes if possible
         
         return st
         
     def readdir(self, path, offset):
         """
         Purpose: Give a listing for ls
-        path: Path to the file/directory
+        path: String containing relative path to file using mountpoint as /
         offset: Included for compatibility. Does nothing
         Returns: Directory listing for ls
         """
@@ -139,6 +139,15 @@ class GFile(fuse.Fuse):
     def mknod(self, path, mode, dev):
         pass
 
+    def unlink(self, path):
+        """
+        Purpose: Remove a file
+        path: String containing relative path to file using mountpoint as /
+        Returns: 0 to indicate success
+        """
+        pe = path.split('/')[1:]
+        gd_client.erase(pe[-1])
+        # TODO: Finish Me!
 
 def main():
     """

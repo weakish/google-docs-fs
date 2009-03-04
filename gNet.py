@@ -21,6 +21,15 @@
 import gdata.docs.service
 import gdata.docs
 
+##########
+### NOTE TO SELF:
+### UploadDocument
+### UploadPresentation
+### UploadSpreadsheet
+### GetMedia
+### ? GetMediaURL ?
+### MediaSource Object
+##########
 class GNet(object):
     """
     Performs all the main interfacing with Google Docs server as well
@@ -57,11 +66,11 @@ class GNet(object):
 
         return self.gd_client.Query(query.ToUri())
         
-    def get_file(self, pe, showfolders = 'false'):
+    def get_filename(self, pe, showfolders = 'false'):
         """
         Purpose: Retrieves the file referred to by path from Google
         pe: A list containing the path elements of the file
-        showfolders: Either 'true' or 'false' - whether get_file
+        showfolders: Either 'true' or 'false' - whether get_filename
                      should also retrieve folders (default: 'false')
         Returns: The gdata List Entry object containing the file or -1 if none exists
         """

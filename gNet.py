@@ -108,10 +108,19 @@ class GNet(object):
         """
         self.gd_client.Delete(file.GetEditLink().href)
         ## TODO: Test Me!
+    
+    def get_file(self, file):
+        """
+        Purpose: Get the file referred to by file off Google Docs
+        file: A list containing the path to the file to download
+        Returns: The file requested, or -1 if the file doesn't exist
+        """
+        #TODO: Finish Me!
+        pass
 
 def main():
     """
-    Purpose: Used for Testing Only. Alter it however you want.
+    Purpose: Used for Testing Only.
     Returns: 0 to indicate successful execution
     """
     return 0 

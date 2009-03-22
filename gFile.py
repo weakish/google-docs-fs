@@ -115,16 +115,20 @@ class GFile(fuse.Fuse):
                 self.directories[dir.title.text.encode('UTF-8')] = []
             if len(excludes) > 0:
                 feed = self.gn.get_docs(filetypes = excludes)
-                for doc in feed.entry:
-                    self.directories[''].append(doc.title.text.encode('UTF-8'))
+                for file in feed.entry:
+                    if file.category[0].label == 'folder':
+                        self.directories[''].append(file.title.text.encode('UTF-8'))
+                    else:
+                        self.directories[''].append('%s.%s' % (file.title.text.encode('UTF-8'), self._file_extension(file)))
         else: #Directory
             self.directories[pe[-1]] = []
             feed = self.gn.get_docs(folder = pe[-1])
             for file in feed.entry:
-                if file.category[0].label is 'folder':
+                if file.category[0].label == 'folder':
                     self.directories[file.title.text.encode('UTF-8')]
-                self.directories[pe[-1]].append(file.title.text.encode('UTF-8'))
-
+                    self.directories[pe[-1]].append(file.title.text.encode('UTF-8'))
+                else:
+                    self.directories[pe[-1]].append('%s.%s' % (file.title.text.encode('UTF-8'), self._file_extension(file)))
         for entry in self.directories[pe[-1]]:
             dirents.append(entry)
 
@@ -155,17 +159,19 @@ class GFile(fuse.Fuse):
         Returns: Nothing
         """
         f = entry.title.text.encode('UTF-8')
-        self.files[f] = GStat()
-        if entry.category[0].label is 'folder':
+
+        if entry.category[0].label == 'folder':
+            self.files[f] = GStat()
             self.files[f].st_mode = stat.S_IFDIR | 0744
             self.files[f].st_nlink = 2
-        else:
+        else: #File
+            f = '%s.%s' % (f, self._file_extension(entry))
+            self.files[f] = GStat()
             self.files[f].st_mode = stat.S_IFREG | 0744
             self.files[f].st_nlink = 1
             self.files[f].st_size = len(f)
 
         #Set times
-        self.files[f].st_atime = int(time.time())
         self.files[f].st_mtime = self._time_convert(entry.updated.text.encode('UTF-8'))
         self.files[f].st_ctime = self._time_convert(entry.published.text.encode('UTF-8'))
 
@@ -176,6 +182,24 @@ class GFile(fuse.Fuse):
         Returns: Integer conversion of t in UNIX Time
         """
         return int(time.mktime(tuple([int(x) for x in (t[:10].split('-')) + t[11:19].split(':')]) + (0,0,0)))
+        
+    def _file_extension(self, entry):
+        """
+        Purpose: Determine the file extension for the given entry
+        entry: DocumentListEntry object to scan for filetype
+        Returns: String of length 3 with file extension (Currently only Oasis filetypes)
+        """
+        
+        for c in entry.category:
+            if c.label == 'document':
+                return 'odt'
+            elif c.label == 'spreadsheet':
+                return 'ods'
+            elif c.label == 'presentation':
+                return 'odp'
+        
+        #Should never reach this
+        return entry.category[0].label
 
 def main():
     """

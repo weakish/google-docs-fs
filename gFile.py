@@ -36,7 +36,7 @@ class GStat(object):
     """
     def __init__(self):
         """
-        Purpose: Sets a default set of file attributes
+        Purpose: Sets the attributes to folder attributes
         Returns: Nothing
         """
         self.st_mode = stat.S_IFDIR | 0744
@@ -49,6 +49,15 @@ class GStat(object):
         self.st_atime = int(time.time())
         self.st_mtime = self.st_atime
         self.st_ctime = self.st_atime
+        
+    def set_file_attr(self, size):
+        self.st_mode = stat.S_IFREG | 0744
+        self.st_nlink = 2
+        self.st_size = size
+        
+    def set_access_times(self, mtime, ctime):
+        self.st_mtime = mtime
+        self.st_atime = ctime
 
 class GFile(fuse.Fuse):
     """
@@ -162,18 +171,16 @@ class GFile(fuse.Fuse):
 
         if entry.category[0].label == 'folder':
             self.files[f] = GStat()
-            self.files[f].st_mode = stat.S_IFDIR | 0744
-            self.files[f].st_nlink = 2
+
         else: #File
             f = '%s.%s' % (f, self._file_extension(entry))
             self.files[f] = GStat()
-            self.files[f].st_mode = stat.S_IFREG | 0744
-            self.files[f].st_nlink = 1
-            self.files[f].st_size = len(f)
-
+            self.files[f].set_file_attr(len(f)) # TODO: try and change len(f) to the actual size
+            
         #Set times
-        self.files[f].st_mtime = self._time_convert(entry.updated.text.encode('UTF-8'))
-        self.files[f].st_ctime = self._time_convert(entry.published.text.encode('UTF-8'))
+        self.files[f].set_access_times(self._time_convert(entry.updated.text.encode('UTF-8')), 
+                                       self._time_convert(entry.published.text.encode('UTF-8')))
+
 
     def _time_convert(self, t):
         """
@@ -198,7 +205,7 @@ class GFile(fuse.Fuse):
             elif c.label == 'presentation':
                 return 'odp'
         
-        #Should never reach this
+        #Should never reach this - used for debugging
         return entry.category[0].label
 
 def main():

@@ -149,7 +149,28 @@ class GFile(fuse.Fuse):
             yield fuse.Direntry(r)
 
     def mknod(self, path, mode, dev):
+        """
+        Purpose: Create file nodes - Adding directory capability later
+        path: Path of file to create
+        mode: Ignored (for now)
+        dev: Ignored (for now)
+        Returns: 0 to indicate succes
+        """
+        ## TODO: Might see if I can get away with not implementing this
         pass
+        
+    def write(self, path, buf, offset):
+        """
+        Purpose: Write the file to Google Docs
+        path: Path of the file to write as String
+        buf: Data to write to Google Docs
+        offset: Ignored (for now)
+        Returns: 0 to indicate success
+        """
+        pe = path.split('/')[1:]
+        self.gn.upload_file(pe, buf)
+        return 0 
+        ##TODO: Pray
 
     def unlink(self, path):
         """

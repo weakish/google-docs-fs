@@ -20,6 +20,7 @@
 
 import gdata.docs.service
 import gdata.docs
+from gdata import MediaSource
 
 ##########
 ### NOTE TO SELF:
@@ -107,8 +108,34 @@ class GNet(object):
         file: A gdata entry object containing the file to erase
         """
         self.gd_client.Delete(file.GetEditLink().href)
+        ## TODO: Check file exists on server
         ## TODO: Test Me!
+        
     
+    def upload_file(self, filename, file):
+        """
+        Purpose: Uploads a file to Google Docs
+        filename: List containing the path to the file to upload
+        file: The actual document to upload
+        """
+        folder = filename[-2]
+        filetype = filename[-1][-3:]
+        mime_type = ""
+        
+        ## TODO: Add support for MS Office file types
+        if filetype == 'odt':
+            mime_type = 'application/vnd.oasis.opendocument.text'
+            upload = self.gd_client.UploadDocument
+        elif filetype == 'ods':
+            mime_type = 'application/vnd.oasis.opendocument.spreadsheet'
+            upload = self.gd_client.UploadSpreadsheet
+        elif filetype == 'odp':
+            mime_type = 'application/vnd.oasis.opendocument.presentation'
+            upload = self.gd_client.UploadPresentation
+        
+        media = MediaSource(file, mime_type, len(buf), filename[-1])
+        upload(media, filename[-1][:-4])
+        
     def get_file(self, file):
         """
         Purpose: Get the file referred to by file off Google Docs

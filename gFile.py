@@ -49,12 +49,12 @@ class GStat(object):
         self.st_atime = int(time.time())
         self.st_mtime = self.st_atime
         self.st_ctime = self.st_atime
-        
+
     def set_file_attr(self, size):
         self.st_mode = stat.S_IFREG | 0744
         self.st_nlink = 2
         self.st_size = size
-        
+
     def set_access_times(self, mtime, ctime):
         self.st_mtime = mtime
         self.st_atime = ctime
@@ -75,7 +75,7 @@ class GFile(fuse.Fuse):
         Returns: Nothing
         """
 
-        fuse.Fuse.__init__(self, *args, **kw)
+        super(GFile, self).__init__(*args, **kw)
         self.gn = gNet.GNet(em, pw)
         self.directories = {}
         self.files = {}
@@ -157,8 +157,32 @@ class GFile(fuse.Fuse):
         Returns: 0 to indicate succes
         """
         ## TODO: Might see if I can get away with not implementing this
-        pass
-        
+        print "mknod"
+        return 0
+
+    def open(self, path, flags):
+    	"""
+    	Purpose: Open the file referred to by path
+    	path: String giving the path to the file to open
+    	flags: String giving Read/Write/Append Flags to apply to file
+    	Returns: Pointer to file
+    	"""
+    	
+    	## Add more as I figure them out
+    	if flags == 32768:
+    		f = 'r'
+    	elif flags == 32769:
+    		f = 'w'
+    	elif flags == 32770:
+    		f = 'r+'
+    	elif flags == 33793:
+    		f = 'a'
+    	elif flags == 33794:
+    		f = 'a+'
+    	else: # Assume that it was passed from self.read()
+    		f = flags
+    	return self.gn.get_file(path, f)
+
     def write(self, path, buf, offset):
         """
         Purpose: Write the file to Google Docs
@@ -168,11 +192,12 @@ class GFile(fuse.Fuse):
         Returns: 0 to indicate success
         """
         pe = path.split('/')[1:]
-        self.gn.upload_file(pe, buf)
-        return 0 
-        ##TODO: Pray
-
-    def unlink(self, path):
+        print "write"
+        #self.gn.upload_file(pe, buf)
+        return len(buf)
+        ##TODO: Fix Me
+   	
+   	def unlink(self, path):
         """
         Purpose: Remove a file
         path: String containing relative path to file using mountpoint as /
@@ -180,7 +205,55 @@ class GFile(fuse.Fuse):
         """
         pe = path.split('/')[1:]
         gd_client.erase(pe[-1])
-        # TODO: Finish Me!
+        # TODO: Finish Me! ?
+
+    def read(self, path, size = -1, offset = 0, fh = None):
+    	"""
+    	Purpose: Read from file pointed to by fh
+    	path: String Path to file if fh is None
+    	size: Int Number of bytes to read
+    	offset: Int Offset to start reading from
+    	fh: File File to read
+    	Returns: Bytes read
+    	"""
+    	
+    	## TODO: Make me work!
+    	if fh is None:
+    		fh = self.open(path, 'rb')
+    	
+    	fh.seek(offset)
+    	buf = fh.read(size)
+    	return buf
+
+    def release(self, path, flags):
+        print "release"
+        return 0
+
+    def flush(self, path):
+        print "flush"
+        return 0
+
+    def truncate(self, path, size):
+        print "truncate"
+        return 0
+
+    def utime(self, path, times):
+        return 0
+
+    def mkdir(self, path, mode):
+        print "mkdir"
+        return 0
+
+    def rmdir(self, path):
+        return 0
+
+    def rename(self, pathfrom, pathto):
+        print "rename"
+        return 0
+
+    def fsync(self, path, isfsyncfile):
+        print "fsync"
+        return 0
 
     def _setattr(self, entry):
         """
@@ -197,9 +270,9 @@ class GFile(fuse.Fuse):
             f = '%s.%s' % (f, self._file_extension(entry))
             self.files[f] = GStat()
             self.files[f].set_file_attr(len(f)) # TODO: try and change len(f) to the actual size
-            
+
         #Set times
-        self.files[f].set_access_times(self._time_convert(entry.updated.text.encode('UTF-8')), 
+        self.files[f].set_access_times(self._time_convert(entry.updated.text.encode('UTF-8')),
                                        self._time_convert(entry.published.text.encode('UTF-8')))
 
 
@@ -210,22 +283,22 @@ class GFile(fuse.Fuse):
         Returns: Integer conversion of t in UNIX Time
         """
         return int(time.mktime(tuple([int(x) for x in (t[:10].split('-')) + t[11:19].split(':')]) + (0,0,0)))
-        
+
     def _file_extension(self, entry):
         """
         Purpose: Determine the file extension for the given entry
         entry: DocumentListEntry object to scan for filetype
         Returns: String of length 3 with file extension (Currently only Oasis filetypes)
         """
-        
+
         for c in entry.category:
             if c.label == 'document':
-                return 'odt'
+                return 'doc' ## CHANGE BACK TO .odt
             elif c.label == 'spreadsheet':
                 return 'ods'
             elif c.label == 'presentation':
                 return 'odp'
-        
+
         #Should never reach this - used for debugging
         return entry.category[0].label
 

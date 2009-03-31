@@ -98,8 +98,11 @@ class GNet(object):
         for entry in filter:
             if path[-2] is '' and len(entry.category) is 1:
                 return entry
-            elif path[-2] in (entry.category[0].label, entry.category[1].label):
-                return entry
+            for c in entry.category:
+            	if path[-2] in c.label:
+            		return entry
+            #elif path[-2] in (entry.category[0].label, entry.category[1].label):
+            #    return entry
         return -1
 
     def erase(self, file):

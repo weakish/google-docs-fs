@@ -55,9 +55,11 @@ class GStat(object):
         self.st_nlink = 2
         self.st_size = size
 
-    def set_access_times(self, mtime, ctime):
+    def set_access_times(self, mtime, ctime, atime = None):
         self.st_mtime = mtime
         self.st_atime = ctime
+        if atime is not None:
+            self.st_atime = atime
 
 class GFile(fuse.Fuse):
     """
@@ -125,7 +127,7 @@ class GFile(fuse.Fuse):
             if len(excludes) > 0:
                 feed = self.gn.get_docs(filetypes = excludes)
                 for file in feed.entry:
-                    if file.category[0].label == 'folder':
+                    if file.GetDocumentType() == 'folder':
                         self.directories[''].append(file.title.text.encode('UTF-8'))
                     else:
                         self.directories[''].append('%s.%s' % (file.title.text.encode('UTF-8'), self._file_extension(file)))
@@ -133,7 +135,7 @@ class GFile(fuse.Fuse):
             self.directories[pe[-1]] = []
             feed = self.gn.get_docs(folder = pe[-1])
             for file in feed.entry:
-                if file.category[0].label == 'folder':
+                if file.GetDocumentType() == 'folder':
                     self.directories[file.title.text.encode('UTF-8')]
                     self.directories[pe[-1]].append(file.title.text.encode('UTF-8'))
                 else:
@@ -161,27 +163,27 @@ class GFile(fuse.Fuse):
         return 0
 
     def open(self, path, flags):
-    	"""
-    	Purpose: Open the file referred to by path
-    	path: String giving the path to the file to open
-    	flags: String giving Read/Write/Append Flags to apply to file
-    	Returns: Pointer to file
-    	"""
-    	
-    	## Add more as I figure them out
-    	if flags == 32768:
-    		f = 'r'
-    	elif flags == 32769:
-    		f = 'w'
-    	elif flags == 32770:
-    		f = 'r+'
-    	elif flags == 33793:
-    		f = 'a'
-    	elif flags == 33794:
-    		f = 'a+'
-    	else: # Assume that it was passed from self.read()
-    		f = flags
-    	return self.gn.get_file(path, f)
+        """
+        Purpose: Open the file referred to by path
+        path: String giving the path to the file to open
+        flags: String giving Read/Write/Append Flags to apply to file
+        Returns: Pointer to file
+        """
+
+        ## Add more as I figure them out
+        if flags == 32768:
+            f = 'r'
+        elif flags == 32769:
+            f = 'w'
+        elif flags == 32770:
+            f = 'r+'
+        elif flags == 33793:
+            f = 'a'
+        elif flags == 33794:
+            f = 'a+'
+        else: # Assume that it was passed from self.read()
+            f = flags
+        return self.gn.get_file(path, f)
 
     def write(self, path, buf, offset):
         """
@@ -196,8 +198,8 @@ class GFile(fuse.Fuse):
         #self.gn.upload_file(pe, buf)
         return len(buf)
         ##TODO: Fix Me
-   	
-   	def unlink(self, path):
+
+    def unlink(self, path):
         """
         Purpose: Remove a file
         path: String containing relative path to file using mountpoint as /
@@ -208,22 +210,22 @@ class GFile(fuse.Fuse):
         # TODO: Finish Me! ?
 
     def read(self, path, size = -1, offset = 0, fh = None):
-    	"""
-    	Purpose: Read from file pointed to by fh
-    	path: String Path to file if fh is None
-    	size: Int Number of bytes to read
-    	offset: Int Offset to start reading from
-    	fh: File File to read
-    	Returns: Bytes read
-    	"""
-    	
-    	## TODO: Make me work!
-    	if fh is None:
-    		fh = self.open(path, 'rb')
-    	
-    	fh.seek(offset)
-    	buf = fh.read(size)
-    	return buf
+        """
+        Purpose: Read from file pointed to by fh
+        path: String Path to file if fh is None
+        size: Int Number of bytes to read
+        offset: Int Offset to start reading from
+        fh: File File to read
+        Returns: Bytes read
+        """
+
+        ## TODO: Make me work!
+        if fh is None:
+            fh = self.open(path, 'rb')
+
+        fh.seek(offset)
+        buf = fh.read(size)
+        return buf
 
     def release(self, path, flags):
         print "release"
@@ -263,7 +265,7 @@ class GFile(fuse.Fuse):
         """
         f = entry.title.text.encode('UTF-8')
 
-        if entry.category[0].label == 'folder':
+        if entry.GetDocumentType() == 'folder':
             self.files[f] = GStat()
 
         else: #File
@@ -271,9 +273,17 @@ class GFile(fuse.Fuse):
             self.files[f] = GStat()
             self.files[f].set_file_attr(len(f)) # TODO: try and change len(f) to the actual size
 
+        print "\n\nEntry Title: ", entry.title.text.encode('UTF-8')
+        print "dir(entry.lastViewed): \n", dir(entry.lastViewed)
         #Set times
-        self.files[f].set_access_times(self._time_convert(entry.updated.text.encode('UTF-8')),
+        if entry.lastViewed is None:
+            self.files[f].set_access_times(self._time_convert(entry.updated.text.encode('UTF-8')),
                                        self._time_convert(entry.published.text.encode('UTF-8')))
+                                       
+        else:
+            self.files[f].set_access_times(self._time_convert(entry.updated.text.encode('UTF-8')),
+                                       self._time_convert(entry.published.text.encode('UTF-8')),
+                                       self._time_convert(entry.lastViewed.text.encode('UTF-8')))
 
 
     def _time_convert(self, t):
@@ -291,16 +301,15 @@ class GFile(fuse.Fuse):
         Returns: String of length 3 with file extension (Currently only Oasis filetypes)
         """
 
-        for c in entry.category:
-            if c.label == 'document':
-                return 'doc' ## CHANGE BACK TO .odt
-            elif c.label == 'spreadsheet':
-                return 'ods'
-            elif c.label == 'presentation':
-                return 'odp'
+        if entry.GetDocumentType() == 'document':
+            return 'doc' ## CHANGE BACK TO .odt
+        elif entry.GetDocumentType() == 'spreadsheet':
+            return 'ods'
+        elif entry.GetDocumentType() == 'presentation':
+            return 'odp'
 
         #Should never reach this - used for debugging
-        return entry.category[0].label
+        return entry.GetDocumentType()
 
 def main():
     """

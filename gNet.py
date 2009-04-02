@@ -99,8 +99,8 @@ class GNet(object):
             if path[-2] is '' and len(entry.category) is 1:
                 return entry
             for c in entry.category:
-            	if path[-2] in c.label:
-            		return entry
+                if path[-2] in c.label:
+                    return entry
             #elif path[-2] in (entry.category[0].label, entry.category[1].label):
             #    return entry
         return -1
@@ -180,13 +180,22 @@ class GNet(object):
         flags: A string giving the flags to open the file with
         Returns: The file requested, or -1 if the file doesn't exist
         """
-        
+
         ## Must remove the temporary file!
         file_path = "%s%s" % ('/tmp', path)
         file = self.get_filename(path[:-4].split('/'))
         filetype = path[-3:].upper()
         if filetype in ['CSV', 'ODS', 'XLS']:
+            import gdata.spreadsheet.service
+
+            spreadsheets_client = gdata.spreadsheet.service.SpreadsheetsService()
+            spreadsheets_client.ClientLogin(self.gd_client.email, self.gd_client.password)
+            # substitute the spreadsheets token into our gd_client
+            docs_auth_token = self.gd_client.GetClientLoginToken()
+            self.gd_client.SetClientLoginToken(spreadsheets_client.GetClientLoginToken())
             self.gd_client.DownloadSpreadsheet(file, file_path)
+            self.gd_client.SetClientLoginToken(docs_auth_token)
+            
         if filetype in ['PPT', 'PPS']:
             self.gd_client.DownloadPresentation(file, file_path)
         else:

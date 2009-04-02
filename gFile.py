@@ -227,13 +227,13 @@ class GFile(fuse.Fuse):
         buf = fh.read(size)
         return buf
 
-    def release(self, path, flags):
-        print "release"
-        return 0
+    #def release(self, path, flags):
+    #    print "release"
+    #    return 0
 
-    def flush(self, path):
-        print "flush"
-        return 0
+    #def flush(self, path):
+    #    print "flush"
+    #    return 0
 
     def truncate(self, path, size):
         print "truncate"
@@ -284,6 +284,12 @@ class GFile(fuse.Fuse):
             self.files[f].set_access_times(self._time_convert(entry.updated.text.encode('UTF-8')),
                                        self._time_convert(entry.published.text.encode('UTF-8')),
                                        self._time_convert(entry.lastViewed.text.encode('UTF-8')))
+                                       
+        # Get File sizes
+        if os.path.exists('/tmp/' + f):
+            self.files[f].st_size = os.path.getsize('/tmp/' + f)
+        
+            
 
 
     def _time_convert(self, t):
@@ -304,7 +310,7 @@ class GFile(fuse.Fuse):
         if entry.GetDocumentType() == 'document':
             return 'doc' ## CHANGE BACK TO .odt
         elif entry.GetDocumentType() == 'spreadsheet':
-            return 'ods'
+            return 'xls'
         elif entry.GetDocumentType() == 'presentation':
             return 'odp'
 

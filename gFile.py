@@ -170,7 +170,8 @@ class GFile(fuse.Fuse):
         Returns: Pointer to file
         """
 
-        ## Add more as I figure them out
+        ## I think that's all of them. The others are just different
+        ## ways of representing the one defined here
         if flags == 32768:
             f = 'r'
         elif flags == 32769:
@@ -183,14 +184,18 @@ class GFile(fuse.Fuse):
             f = 'a+'
         else: # Assume that it was passed from self.read()
             f = flags
-        return self.gn.get_file(path, f)
+        file = self.gn.get_file(path, f)
+        print self.files
+        self.files[path.split('/')[-1]].st_size = os.path.getsize('/tmp/google-docs-fs/' + path.split('/')[-1])
+        return file
 
-    def write(self, path, buf, offset):
+    def write(self, path, buf, offset, fh = None):
         """
         Purpose: Write the file to Google Docs
         path: Path of the file to write as String
         buf: Data to write to Google Docs
         offset: Ignored (for now)
+        fh: File to read
         Returns: 0 to indicate success
         """
         pe = path.split('/')[1:]
@@ -215,25 +220,26 @@ class GFile(fuse.Fuse):
         path: String Path to file if fh is None
         size: Int Number of bytes to read
         offset: Int Offset to start reading from
-        fh: File File to read
+        fh: File to read
         Returns: Bytes read
         """
 
-        ## TODO: Make me work!
+        ## TODO: Make me work with spreadsheets
         if fh is None:
             fh = self.open(path, 'rb')
 
+        print offset
         fh.seek(offset)
         buf = fh.read(size)
         return buf
 
-    #def release(self, path, flags):
-    #    print "release"
-    #    return 0
-
-    #def flush(self, path):
-    #    print "flush"
-    #    return 0
+    def release(self, path, flags, fh = None):
+        tmp_path = '/tmp/google-docs-fs/' + path.split('/')[-1]
+        if fh is not None:
+            fh.close()
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        return 0
 
     def truncate(self, path, size):
         print "truncate"
@@ -273,8 +279,6 @@ class GFile(fuse.Fuse):
             self.files[f] = GStat()
             self.files[f].set_file_attr(len(f)) # TODO: try and change len(f) to the actual size
 
-        print "\n\nEntry Title: ", entry.title.text.encode('UTF-8')
-        print "dir(entry.lastViewed): \n", dir(entry.lastViewed)
         #Set times
         if entry.lastViewed is None:
             self.files[f].set_access_times(self._time_convert(entry.updated.text.encode('UTF-8')),
@@ -286,8 +290,8 @@ class GFile(fuse.Fuse):
                                        self._time_convert(entry.lastViewed.text.encode('UTF-8')))
                                        
         # Get File sizes
-        if os.path.exists('/tmp/' + f):
-            self.files[f].st_size = os.path.getsize('/tmp/' + f)
+        if os.path.exists('/tmp/google-docs-fs/' + f):
+            self.files[f].st_size = os.path.getsize('/tmp/google-docs-fs/' + f)
         
             
 

@@ -103,7 +103,7 @@ class GNet(object):
                     return entry
             #elif path[-2] in (entry.category[0].label, entry.category[1].label):
             #    return entry
-        return -1
+        raise IOError, 'File not on Google Docs'
 
     def erase(self, file):
         """
@@ -180,12 +180,20 @@ class GNet(object):
         flags: A string giving the flags to open the file with
         Returns: The file requested, or -1 if the file doesn't exist
         """
+        import os
 
-        ## Must remove the temporary file!
-        file_path = "%s%s" % ('/tmp', path)
+        # Create the temporary files folder if necessary
+        if not os.path.isdir('/tmp/google-docs-fs'):
+            os.mkdir('/tmp/google-docs-fs')
+        file_path = "%s%s" % ('/tmp/google-docs-fs', path)
+
         file = self.get_filename(path[:-4].split('/'))
+        print "\n---------\nFILENAME IS: ", file
+        print "---------"
         filetype = path[-3:].upper()
         if filetype in ['CSV', 'ODS', 'XLS']:
+            print "Downloading Spreadsheet"
+            ## TODO: Make this work - Taken from GData List API FAQ
             import gdata.spreadsheet.service
 
             spreadsheets_client = gdata.spreadsheet.service.SpreadsheetsService()
@@ -195,10 +203,12 @@ class GNet(object):
             self.gd_client.SetClientLoginToken(spreadsheets_client.GetClientLoginToken())
             self.gd_client.DownloadSpreadsheet(file, file_path)
             self.gd_client.SetClientLoginToken(docs_auth_token)
-            
+
         if filetype in ['PPT', 'PPS']:
+            print "Downloading Presentation"
             self.gd_client.DownloadPresentation(file, file_path)
         else:
+            print "Downloading Document"
             self.gd_client.DownloadDocument(file, file_path)
 
         return open(file_path, flags)

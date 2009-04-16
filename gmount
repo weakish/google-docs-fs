@@ -9,3 +9,5 @@ else
 	./"gFile.py" $2 $pass $1
 fi
 
+## Create the temporary directory 
+mkdir -p /tmp/google-docs-fs 

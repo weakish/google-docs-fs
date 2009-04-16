@@ -81,7 +81,8 @@ class GFile(fuse.Fuse):
         self.gn = gNet.GNet(em, pw)
         self.directories = {}
         self.files = {}
-
+        self.written = {}
+        self.time_accessed = {}
 
 
     def getattr(self, path):
@@ -172,6 +173,9 @@ class GFile(fuse.Fuse):
 
         ## I think that's all of them. The others are just different
         ## ways of representing the one defined here
+        ## TODO: Rewrite this so the file isn't downloaded on write
+        ## Buffer will just be written to a new temporary file and this
+        ## will then be uploaded
         if flags == 32768:
             f = 'r'
         elif flags == 32769:
@@ -184,9 +188,14 @@ class GFile(fuse.Fuse):
             f = 'a+'
         else: # Assume that it was passed from self.read()
             f = flags
-        file = self.gn.get_file(path, f)
+        print "Flag is: ", f
+        if f != 'w': # Download only when you want to read the file
+            if os.path.exists('/tmp/google-docs-fs/' + os.path.basename(path)):
+                file = open('/tmp/google-docs-fs/' + os.path.basename(path))
+            else:
+                file = self.gn.get_file(path, f)
         print self.files
-        self.files[path.split('/')[-1]].st_size = os.path.getsize('/tmp/google-docs-fs/' + path.split('/')[-1])
+        self.files[os.path.basename(path)].st_size = os.path.getsize('/tmp/google-docs-fs/' + os.path.basename(path))
         return file
 
     def write(self, path, buf, offset, fh = None):
@@ -198,17 +207,33 @@ class GFile(fuse.Fuse):
         fh: File to read
         Returns: 0 to indicate success
         """
-        pe = path.split('/')[1:]
-        print "write"
-        #self.gn.upload_file(pe, buf)
-        return len(buf)
+
+        tmp_path = ('/tmp/google-docs-fs/' + os.path.basename(path))
+        tmp_file = open(tmp_path, 'wb')
+        tmp_file.seek(offset)
+        print "-- OFFSET ", offset, " --"
+        print "--------\nBUFFER: ", type(buf)
+        print "--------"
+        tmp_file.write(buf)
+        tmp_file.close()
+        self.written[tmp_path] = True
+        self.time_accessed[tmp_path] = time.time()
+        print self.time_accessed
         ##TODO: Fix Me
+
+    def flush(self, path, fh = None):
+        """
+        Purpose: Flush the write data and upload it to Google Docs
+        path: String containing path to file to flush
+        fh: File Handle
+        """
+        print "---\nFlush\n---"
+        
 
     def unlink(self, path):
         """
         Purpose: Remove a file
         path: String containing relative path to file using mountpoint as /
-        Returns: 0 to indicate success
         """
         pe = path.split('/')[1:]
         gd_client.erase(pe[-1])
@@ -231,15 +256,30 @@ class GFile(fuse.Fuse):
         print offset
         fh.seek(offset)
         buf = fh.read(size)
+        tmp_path = '/tmp/google-docs-fs/' + os.path.basename(path)
+        self.time_accessed[tmp_path] = time.time()
         return buf
 
     def release(self, path, flags, fh = None):
-        tmp_path = '/tmp/google-docs-fs/' + path.split('/')[-1]
+        """
+        Purpose: Called after a file is closed
+        path: String containing path to file to be released
+        flags: Ignored
+        fh: File Handle to be released
+        """
+        tmp_path = '/tmp/google-docs-fs/' + os.path.basename(path)
         if fh is not None:
             fh.close()
+        
         if os.path.exists(tmp_path):
-            os.remove(tmp_path)
-        return 0
+            if tmp_path in self.written and self.written[tmp_path]:
+                self.gn.update_file_contents(path)
+                self.written[tmp_path] = False
+            print self.time_accessed
+            for t in self.time_accessed:
+                print t
+                if time.time() - self.time_accessed[t] > 300:
+                    os.remove(t)
 
     def truncate(self, path, size):
         print "truncate"
@@ -249,10 +289,21 @@ class GFile(fuse.Fuse):
         return 0
 
     def mkdir(self, path, mode):
+        """
+        Purpose: Make a directory
+        path: String containing path to directory to create
+        mode: Ignored (for now)
+        """
         print "mkdir"
+        
         return 0
 
     def rmdir(self, path):
+        """
+        Purpose: Remove a directory referenced by path
+        path: String containing path to directory to remove
+        """
+        self.unlink(path)
         return 0
 
     def rename(self, pathfrom, pathto):
@@ -283,17 +334,17 @@ class GFile(fuse.Fuse):
         if entry.lastViewed is None:
             self.files[f].set_access_times(self._time_convert(entry.updated.text.encode('UTF-8')),
                                        self._time_convert(entry.published.text.encode('UTF-8')))
-                                       
+
         else:
             self.files[f].set_access_times(self._time_convert(entry.updated.text.encode('UTF-8')),
                                        self._time_convert(entry.published.text.encode('UTF-8')),
                                        self._time_convert(entry.lastViewed.text.encode('UTF-8')))
-                                       
+
         # Get File sizes
         if os.path.exists('/tmp/google-docs-fs/' + f):
             self.files[f].st_size = os.path.getsize('/tmp/google-docs-fs/' + f)
-        
-            
+
+
 
 
     def _time_convert(self, t):

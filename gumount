@@ -1,0 +1,2 @@
+fusermount -u $1
+rm -rf /tmp/google-docs-fs/*

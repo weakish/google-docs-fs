@@ -191,7 +191,7 @@ class GFile(fuse.Fuse):
         print "Flag is: ", f
         if f != 'w': # Download only when you want to read the file
             if os.path.exists('/tmp/google-docs-fs/' + os.path.basename(path)):
-                file = open('/tmp/google-docs-fs/' + os.path.basename(path))
+                file = open('/tmp/google-docs-fs/' + os.path.basename(path), f)
             else:
                 file = self.gn.get_file(path, f)
         print self.files
@@ -208,17 +208,18 @@ class GFile(fuse.Fuse):
         Returns: 0 to indicate success
         """
 
+        print "------\nWRITE\n------"
         tmp_path = ('/tmp/google-docs-fs/' + os.path.basename(path))
-        tmp_file = open(tmp_path, 'wb')
-        tmp_file.seek(offset)
+        if fh is None:
+            fh = open(tmp_path, 'wb')
+        fh.seek(offset)
         print "-- OFFSET ", offset, " --"
-        print "--------\nBUFFER: ", type(buf)
-        print "--------"
-        tmp_file.write(buf)
-        tmp_file.close()
+        print "BUFFER:", len(buf)
+        fh.write(buf)
         self.written[tmp_path] = True
         self.time_accessed[tmp_path] = time.time()
         print self.time_accessed
+        return len(buf)
         ##TODO: Fix Me
 
     def flush(self, path, fh = None):
@@ -228,8 +229,9 @@ class GFile(fuse.Fuse):
         fh: File Handle
         """
         print "---\nFlush\n---"
+        print fh
+        fh.close()
         
-
     def unlink(self, path):
         """
         Purpose: Remove a file
@@ -251,7 +253,7 @@ class GFile(fuse.Fuse):
 
         ## TODO: Make me work with spreadsheets
         if fh is None:
-            fh = self.open(path, 'rb')
+            fh = self.open(path, 'rb+')
 
         print offset
         fh.seek(offset)
@@ -267,6 +269,8 @@ class GFile(fuse.Fuse):
         flags: Ignored
         fh: File Handle to be released
         """
+        
+        print '------\nRELEASE\n------'
         tmp_path = '/tmp/google-docs-fs/' + os.path.basename(path)
         if fh is not None:
             fh.close()

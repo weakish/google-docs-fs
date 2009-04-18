@@ -215,7 +215,7 @@ class GNet(object):
         ms = gdata.MediaSource(file_path = tmp_path, content_type = mime)
         entry = self.get_filename(path)
         entry.title.text = title
-        self.gd_client.Put(ms, entry.GetEditMediaLink().href)
+        self.gd_client.Put(data = entry, uri = entry.GetEditMediaLink().href, media_source = ms)
         
     def make_folder(self, path):
         """

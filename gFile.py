@@ -2,7 +2,7 @@
 #
 #   gFile.py
 #
-#   Copyright 2008-2009 Scott Walton <d38dm8nw81k1ng@gmail.com>
+#   Copyright 2008-2009 Scott C. Walton <d38dm8nw81k1ng@gmail.com>
 #
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License (version 2), as

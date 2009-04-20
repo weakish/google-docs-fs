@@ -176,13 +176,13 @@ class GNet(object):
         # Create the temporary files folder if necessary
         if not os.path.isdir('/tmp/google-docs-fs'):
             os.mkdir('/tmp/google-docs-fs')
-        tmp_path = "%s%s" % ('/tmp/google-docs-fs', path)
+        tmp_path = "%s/%s" % ('/tmp/google-docs-fs', os.path.basename(path))
 
         file = self.get_filename(path)
         print "\n---------\nFILENAME IS: ", file
         print "---------"
-        filetype = path[-3:].upper()
-        if filetype in ['CSV', 'ODS', 'XLS']:
+        filetype = file.GetDocumentType()
+        if filetype == 'spreadsheet':
             print "Downloading Spreadsheet"
             ## TODO: Make this work - Taken from GData List API Documentation
             import gdata.spreadsheet.service
@@ -192,15 +192,15 @@ class GNet(object):
             # substitute the spreadsheets token into our gd_client
             docs_auth_token = self.gd_client.GetClientLoginToken()
             self.gd_client.SetClientLoginToken(spreadsheets_client.GetClientLoginToken())
-            self.gd_client.DownloadSpreadsheet(file, tmp_path)
+            self.gd_client.DownloadSpreadsheet(file.resourceId.text, tmp_path)
             self.gd_client.SetClientLoginToken(docs_auth_token)
 
-        if filetype in ['PPT', 'PPS']:
+        if filetype == 'presentation':
             print "Downloading Presentation"
-            self.gd_client.DownloadPresentation(file, tmp_path)
-        else:
+            self.gd_client.DownloadPresentation(file.resourceId.text, tmp_path)
+        if filetype == 'document':
             print "Downloading Document"
-            self.gd_client.DownloadDocument(file, tmp_path)
+            self.gd_client.DownloadDocument(file.resourceId.text, tmp_path)
 
         return open(tmp_path, flags)
 
@@ -216,7 +216,7 @@ class GNet(object):
         entry = self.get_filename(path)
         entry.title.text = title
         self.gd_client.Put(data = entry, uri = entry.GetEditMediaLink().href, media_source = ms)
-        
+
     def make_folder(self, path):
         """
         Purpose: Create a folder specified by path
@@ -226,7 +226,7 @@ class GNet(object):
         if len(pe) == 1:
             self.gd_client.CreateFolder(pe[-1])
             ##TODO: FINISH
-            
+
     def _get_info(self, path):
         """Purpose: Extracts the key parts of a file's name
         path: String containing path to a file to get information about

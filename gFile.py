@@ -132,6 +132,8 @@ class GFile(fuse.Fuse):
                         self.directories[''].append(file.title.text.encode('UTF-8'))
                     else:
                         self.directories[''].append('%s.%s' % (file.title.text.encode('UTF-8'), self._file_extension(file)))
+            print excludes
+            
         else: #Directory
             self.directories[pe[-1]] = []
             feed = self.gn.get_docs(folder = pe[-1])
@@ -143,7 +145,9 @@ class GFile(fuse.Fuse):
                     self.directories[pe[-1]].append('%s.%s' % (file.title.text.encode('UTF-8'), self._file_extension(file)))
         for entry in self.directories[pe[-1]]:
             dirents.append(entry)
-
+            
+        print self.directories
+        print dirents
         # Set the appropriate attributes for use with getattr()
         for file in feed.entry:
             self._setattr(file)
@@ -218,6 +222,7 @@ class GFile(fuse.Fuse):
         fh.write(buf)
         self.written[tmp_path] = True
         self.time_accessed[tmp_path] = time.time()
+        self.time_accessed[tmp_path] = time.time()
         print self.time_accessed
         return len(buf)
         ##TODO: Fix Me
@@ -231,7 +236,7 @@ class GFile(fuse.Fuse):
         print "---\nFlush\n---"
         print fh
         fh.close()
-        
+
     def unlink(self, path):
         """
         Purpose: Remove a file
@@ -269,12 +274,12 @@ class GFile(fuse.Fuse):
         flags: Ignored
         fh: File Handle to be released
         """
-        
+
         print '------\nRELEASE\n------'
         tmp_path = '/tmp/google-docs-fs/' + os.path.basename(path)
         if fh is not None:
             fh.close()
-        
+
         if os.path.exists(tmp_path):
             if tmp_path in self.written and self.written[tmp_path]:
                 self.gn.update_file_contents(path)
@@ -299,7 +304,7 @@ class GFile(fuse.Fuse):
         mode: Ignored (for now)
         """
         print "mkdir"
-        
+
         return 0
 
     def rmdir(self, path):
@@ -367,11 +372,11 @@ class GFile(fuse.Fuse):
         """
 
         if entry.GetDocumentType() == 'document':
-            return 'doc' ## CHANGE BACK TO .odt
+            return 'doc'
         elif entry.GetDocumentType() == 'spreadsheet':
             return 'xls'
         elif entry.GetDocumentType() == 'presentation':
-            return 'odp'
+            return 'ppt'
 
         #Should never reach this - used for debugging
         return entry.GetDocumentType()

@@ -109,42 +109,34 @@ class GNet(object):
         ## TODO: Check file exists on server
         ## TODO: Test Me!
 
-    def upload_file(self, filename):
+    def upload_file(self, path):
         """
         Purpose: Uploads a file to Google Docs
-        filename: String containing path to the file to upload
-        data: Data buffer of file to be uploaded
+        path: String containing path of the file to be uploaded
         """
-        import os
 
-        name = os.path.basename(filename)
-
-        if filename.split('/')[-2] != "google-docs-fs":
-            folder = filename.split('/')[-2]
+        if path.split('/')[-2] != ' ':
+            folder = path.split('/')[-2]
         else:
             folder = None
 
-        file_title = name[:-4]
-        print filename
+        name, title, type, mime = self._get_info(path)
+        
+        print path
         print folder
-        filetype = filename[-3:].upper()
-        print filetype
-        print file_title
+        print name
+        print title
+        print type
+        print mime
 
-        #Set the MIME type for use with MediaSource
-        if filetype not in gdata.docs.service.SUPPORTED_FILETYPES:
-            raise IOError
+        media = MediaSource(file_path = ('/tmp/google-docs-fs/' + name), content_type = mime)
+
+        if type in ['CSV', 'ODS', 'XLS']:
+            self.gd_client.UploadSpreadsheet(media, title)
+        if type in ['PPT', 'PPS']:
+            self.gd_client.UploadPresentation(media, title)
         else:
-            mime_type = gdata.docs.service.SUPPORTED_FILETYPES[filetype]
-
-        media = MediaSource(file_path = filename, content_type = mime_type)
-
-        if filetype in ['CSV', 'ODS', 'XLS']:
-            self.gd_client.UploadSpreadsheet(media, file_title)
-        if filetype in ['PPT', 'PPS']:
-            self.gd_client.UploadPresentation(media, file_title)
-        else:
-            self.gd_client.UploadDocument(media, file_title)
+            self.gd_client.UploadDocument(media, title)
 
     def create_dir(self, path):
         """
@@ -177,8 +169,16 @@ class GNet(object):
         if not os.path.isdir('/tmp/google-docs-fs'):
             os.mkdir('/tmp/google-docs-fs')
         tmp_path = "%s/%s" % ('/tmp/google-docs-fs', os.path.basename(path))
-
+        
         file = self.get_filename(path)
+        ## Must be a new file
+        
+        if file is None:
+            import stat
+            print "New file"
+            os.mknod(tmp_path, 0700 | stat.S_IFREG)
+            return open(tmp_path, flags)
+
         print "\n---------\nFILENAME IS: ", file
         print "---------"
         filetype = file.GetDocumentType()

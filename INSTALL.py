@@ -18,6 +18,9 @@
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
 
+## A Simple installation script. It's not nice, nor particularly good
+## but it installs the file system adequately and generates a remove
+## script to simplify removal of the file system
 import sys
 import os
 
@@ -61,7 +64,7 @@ if [ $# -ne 2 ]
 else
 	echo "Enter password for " $2 ":"
 	read -s pass
-    %s/gFile.py $2 pass $1
+    %s/gFile.py $2 $pass $1
          
 fi
 

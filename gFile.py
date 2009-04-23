@@ -21,6 +21,7 @@
 import stat
 import os
 import sys
+import platform
 import errno
 import time
 import fuse
@@ -83,6 +84,7 @@ class GFile(fuse.Fuse):
         self.files = {}
         self.written = {}
         self.time_accessed = {}
+        self.to_upload = {}
 
 
     def getattr(self, path):
@@ -92,15 +94,18 @@ class GFile(fuse.Fuse):
         Returns: a GStat object with some updated values
         """
 
-        pe = path.split('/')
+        filename = os.path.basename(path)
         self.files[''] = GStat()
-        st = self.files[pe[-1]]
+        if filename in self.files:
+            st = self.files[filename]
+        else:
+            return -errno.ENOENT
         # Set proper attributes for files and directories
         if path == '/': # Root
             pass
-        elif pe[-1] in self.directories: # Is a directory
+        elif filename in self.directories: # Is a directory
             pass
-        elif pe[-1] in self.directories[pe[-2]]: # Is a file
+        elif filename in self.directories[path.split('/')[-2]]: # Is a file
             pass
         else: # Evidently, it must not exist
             return -errno.ENOENT
@@ -122,6 +127,7 @@ class GFile(fuse.Fuse):
             excludes = []
             self.directories[''] = []
             feed = self.gn.get_docs(filetypes = ['folder'])
+            print feed
             for dir in feed.entry:
                 excludes.append('-' + dir.title.text.encode('UTF-8'))
                 self.directories[dir.title.text.encode('UTF-8')] = []
@@ -137,6 +143,7 @@ class GFile(fuse.Fuse):
         else: #Directory
             self.directories[pe[-1]] = []
             feed = self.gn.get_docs(folder = pe[-1])
+            print feed
             for file in feed.entry:
                 if file.GetDocumentType() == 'folder':
                     self.directories[file.title.text.encode('UTF-8')]
@@ -157,14 +164,23 @@ class GFile(fuse.Fuse):
 
     def mknod(self, path, mode, dev):
         """
-        Purpose: Create file nodes - Adding directory capability later
+        Purpose: Create file nodes. Use mkdir to create directories
         path: Path of file to create
         mode: Ignored (for now)
         dev: Ignored (for now)
         Returns: 0 to indicate succes
         """
         ## TODO: Might see if I can get away with not implementing this
-        print "mknod"
+        print "----\nMKNOD\n----"
+        filename = os.path.basename(path)
+        print filename
+        self.to_upload[path] = True
+        print self.to_upload
+        self.files[filename] = GStat()
+        print self.files
+        self.files[filename].set_file_attr(0)
+        self.directories[path.split('/')[-2]].append(filename)
+        print self.directories
         return 0
 
     def open(self, path, flags):
@@ -194,11 +210,15 @@ class GFile(fuse.Fuse):
             f = flags
         print "Flag is: ", f
         if f != 'w': # Download only when you want to read the file
-            if os.path.exists('/tmp/google-docs-fs/' + os.path.basename(path)):
-                file = open('/tmp/google-docs-fs/' + os.path.basename(path), f)
-            else:
+            if not os.path.exists('/tmp/google-docs-fs/' + os.path.basename(path)):
                 file = self.gn.get_file(path, f)
+            else:
+                file = open('/tmp/google-docs-fs/' + os.path.basename(path), f)
+        else:
+            file = open('/tmp/google-docs-fs/' + os.path.basename(path), f)
+                            
         print self.files
+        print file
         self.files[os.path.basename(path)].st_size = os.path.getsize('/tmp/google-docs-fs/' + os.path.basename(path))
         return file
 
@@ -235,15 +255,19 @@ class GFile(fuse.Fuse):
         """
         print "---\nFlush\n---"
         print fh
-        fh.close()
+        if fh is not None:
+            fh.close()
 
     def unlink(self, path):
         """
         Purpose: Remove a file
         path: String containing relative path to file using mountpoint as /
         """
-        pe = path.split('/')[1:]
-        gd_client.erase(pe[-1])
+        filename = os.path.basename(path)
+        if filename in self.directories and filename not in self.files:
+            gd_client.erase(filename)
+        else:
+            return -errno.EISDIR
         # TODO: Finish Me! ?
 
     def read(self, path, size = -1, offset = 0, fh = None):
@@ -277,18 +301,21 @@ class GFile(fuse.Fuse):
 
         print '------\nRELEASE\n------'
         tmp_path = '/tmp/google-docs-fs/' + os.path.basename(path)
-        if fh is not None:
-            fh.close()
 
+        if path in self.to_upload and tmp_path in self.written:
+            self.gn.upload_file(path)
+            del self.to_upload[path]
+        
         if os.path.exists(tmp_path):
-            if tmp_path in self.written and self.written[tmp_path]:
+            if tmp_path in self.written:
                 self.gn.update_file_contents(path)
-                self.written[tmp_path] = False
-            print self.time_accessed
-            for t in self.time_accessed:
-                print t
-                if time.time() - self.time_accessed[t] > 300:
-                    os.remove(t)
+                del self.written[tmp_path]
+                        
+        print self.time_accessed    
+        for t in self.time_accessed:
+            print t
+            if time.time() - self.time_accessed[t] > 300:
+                os.remove(t)
 
     def truncate(self, path, size):
         print "truncate"

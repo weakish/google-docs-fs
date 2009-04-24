@@ -18,6 +18,7 @@
 #   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #   MA 02110-1301, USA.
 
+import os
 import gdata.docs.service
 import gdata.docs
 from gdata import MediaSource
@@ -66,7 +67,6 @@ class GNet(object):
                      should also retrieve folders (default: 'false')
         Returns: The gdata List Entry object containing the file or -1 if none exists
         """
-        import os
         print path
         name = os.path.basename(path)
         title = name.split('.')[0]
@@ -101,7 +101,6 @@ class GNet(object):
                     return entry
             #elif path[-2] in (entry.category[0].label, entry.category[1].label):
             #    return entry
-        #raise IOError, 'File not on Google Docs'
 
     def erase(self, path, folder = False):
         """
@@ -170,7 +169,6 @@ class GNet(object):
         flags: A string giving the flags to open the file with
         Returns: The file requested, or -1 if the file doesn't exist
         """
-        import os
 
         # Create the temporary files folder if necessary
         if not os.path.isdir('/tmp/google-docs-fs'):
@@ -234,14 +232,52 @@ class GNet(object):
             self.gd_client.CreateFolder(pe[-1])
         else:
             self.gd_client.CreateFolder(pe[-1], self.get_filename(pe[-2]))
-            ##TODO: FINISH
+            
+    def move_file(self, pathfrom, pathto):
+        """
+        Purpose: Move a file from one folder to another
+        pathfrom: String containing path to file to move
+        pathto: String containing path to move to
+        """
+        folderto = os.path.dirname(pathto)
 
+        entry_from = self.get_filename(pathfrom, showfolders = 'true')
+        
+        if os.path.basename(pathfrom) != os.path.basename(pathto):
+            entry_from = self.rename_file(entry_from, os.path.basename(pathto))
+
+        if folderto == '/':
+            self.gd_client.MoveOutOfFolder(entry_from)
+            return
+            
+        entry_to = self.get_filename(folderto, showfolders = 'true')
+        
+        type = entry_from.GetDocumentType()
+        if type == 'folder':
+            self.gd_client.MoveFolderIntoFolder(entry_from, entry_to)
+        elif type == 'document':
+            self.gd_client.MoveDocumentIntoFolder(entry_from, entry_to)
+        elif type == 'spreadsheet':
+            self.gd_client.MoveSpreadsheetIntoFolder(entry_from, entry_to)
+        elif type == 'presentation':
+            self.gd_client.MovePresentationIntoFolder(entry_from, entry_to)
+
+    def rename_file(self, entry, name_to):
+        """
+        Purpose: Renames an entry
+        entry_from: GDataListEntry to change the name of
+        name_to: String name to change to
+        Returns: GDataListEntry of renamed file
+        """
+        entry.title.text = name_to
+        return self.gd_client.Put(entry, entry.GetEditLink().href)        
+        
     def _get_info(self, path):
-        """Purpose: Extracts the key parts of a file's name
+        """
+        Purpose: Extracts the key parts of a file's name
         path: String containing path to a file to get information about
         Returns: Tuple containing (file_name, file_title, file_type.upper(), mime_type)
         """
-        import os
         file_name = os.path.basename(path)
         file_title = file_name[:-4]
         file_type = file_name[-3:].upper()

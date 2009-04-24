@@ -52,11 +52,21 @@ class GStat(object):
         self.st_ctime = self.st_atime
 
     def set_file_attr(self, size):
+        """
+        Purpose: Set attributes of a file
+        size: int the file's size in bytes
+        """
         self.st_mode = stat.S_IFREG | 0744
         self.st_nlink = 2
         self.st_size = size
 
     def set_access_times(self, mtime, ctime, atime = None):
+        """
+        Purpose: Set the access times of a file
+        mtime: int modified time
+        ctime: int creation time
+        atime: int access time
+        """
         self.st_mtime = mtime
         self.st_atime = ctime
         if atime is not None:
@@ -219,6 +229,7 @@ class GFile(fuse.Fuse):
             else:
                 file = open('/tmp/google-docs-fs/' + os.path.basename(path), f)
         else:
+            print os.path.basename(path)
             file = open('/tmp/google-docs-fs/' + os.path.basename(path), f)
                             
         print self.files
@@ -382,18 +393,32 @@ class GFile(fuse.Fuse):
         return 0
 
     def rename(self, pathfrom, pathto):
+        """
+        Purpose: Move file to new location. Cannot rename in place.
+        pathfrom: String path of file to move
+        pathto: String new file path
+        """
         print "rename"
-        return 0
-
-    def fsync(self, path, isfsyncfile):
-        print "fsync"
+        
+        pef = pathfrom.split('/')
+        pet = pathto.split('/')
+        
+        if len(pef) == len(pet):
+            for f, t in pef, pet:
+                if f != t:
+                    self.gn.move_file(pathfrom, pathto)
+                    break
+            else:
+                return -errno.ESAMEDIR
+        else:
+            self.gn.move_file(pathfrom, pathto)
+            
         return 0
 
     def _setattr(self, entry):
         """
         Purpose: Set the getattr information for entry
         entry: DocumentListEntry object to extract data from
-        Returns: Nothing
         """
         f = entry.title.text.encode('UTF-8')
 

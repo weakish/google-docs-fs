@@ -42,3 +42,26 @@ http://code.google.com/p/google-docs-fs/issues/detail?id=3
 I will begin to rectify this on Monday 27th April, when I borrow a
 friend's Mac. Until then, sit tight and rest assured that I am going to
 fix this.
+
+----------
+KNOWN BUGS
+----------
+
+1. For reasons I cannot fathom, presentations cannot be uploaded. If
+anyone finds that it works for them, can you please let me know?
+2. Moving files into the root directory of the file system is also
+broken. This is due to errors happening within gdata and I cannot see
+any problems with my code. I will be posting on Google Groups to see
+if I can get to the bottom of this.
+3. Trying mkdir in anything other than the root directory doesn't
+work. I have looked at the debug output and it seems to be problems
+with gdata-python. I will look into it some more but until then, this
+feature is essentially unsupported.
+
+
+On the bright side, I have actually implemented much more than I expected
+to by this time. Making directories and renaming files were not in my
+original timescale and so I regard their (partial) inclusion as a bonus.
+I'll get to the bottom of these issues and hopefully, I will have a fully
+functional file system sooner rather than later.
+

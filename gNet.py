@@ -227,11 +227,13 @@ class GNet(object):
         Purpose: Create a folder specified by path
         path: String containing path to folder to create
         """
-        pe = path.split('/')[1:]
-        if len(pe) == 1:
-            self.gd_client.CreateFolder(pe[-1])
+        if os.path.dirname(path) == '/':
+            print 1
+            self.gd_client.CreateFolder(os.path.basename(path))
         else:
-            self.gd_client.CreateFolder(pe[-1], self.get_filename(pe[-2]))
+            print 2
+            parent_dir = self.get_filename(os.path.dirname(path), showfolders = 'true')
+            self.gd_client.CreateFolder(os.path.basename(path), parent_dir)
             
     def move_file(self, pathfrom, pathto):
         """

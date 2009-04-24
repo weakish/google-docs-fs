@@ -133,11 +133,15 @@ class GFile(fuse.Fuse):
                 self.directories[dir.title.text.encode('UTF-8')] = []
             if len(excludes) > 0:
                 feed = self.gn.get_docs(filetypes = excludes)
-                for file in feed.entry:
-                    if file.GetDocumentType() == 'folder':
-                        self.directories[''].append(file.title.text.encode('UTF-8'))
-                    else:
-                        self.directories[''].append('%s.%s' % (file.title.text.encode('UTF-8'), self._file_extension(file)))
+            else:
+                feed = self.gn.get_docs() # All in root folder
+                
+            for file in feed.entry:
+                if file.GetDocumentType() == 'folder':
+                    self.directories[''].append(file.title.text.encode('UTF-8'))
+                else:
+                    self.directories[''].append('%s.%s' % (file.title.text.encode('UTF-8'), self._file_extension(file)))
+            
             print excludes
             
         else: #Directory
@@ -264,10 +268,15 @@ class GFile(fuse.Fuse):
         path: String containing relative path to file using mountpoint as /
         """
         filename = os.path.basename(path)
-        if filename in self.directories and filename not in self.files:
-            gd_client.erase(filename)
-        else:
+        if filename in self.directories:
+            for d in self.directories:
+                if filename in d and path.split('/')[-2] == d:
+                    self.gn.erase(path)
             return -errno.EISDIR
+        try:
+            self.gn.erase(path)
+        except AttributeError, e:
+            return -errno.ENOENT
         # TODO: Finish Me! ?
 
     def read(self, path, size = -1, offset = 0, fh = None):
@@ -331,7 +340,22 @@ class GFile(fuse.Fuse):
         mode: Ignored (for now)
         """
         print "mkdir"
+        print path.split('/')
+        name = os.path.basename(path)
+        if name in self.directories:
+            if name in self.directories[path.split('/')[-2]]:
+                return -errno.EEXIST
+        try:
+            self.directories[path.split('/')[-2]].append(name)
+        except KeyError:
+            return -errno.ENOENT
 
+        self.gn.make_folder(path)
+        self.directories[name] = []
+        self._setattr(self.gn.get_filename(path, showfolders = 'true'))
+        print self.directories
+        print self.files
+        
         return 0
 
     def rmdir(self, path):
@@ -339,7 +363,22 @@ class GFile(fuse.Fuse):
         Purpose: Remove a directory referenced by path
         path: String containing path to directory to remove
         """
-        self.unlink(path)
+        filename = os.path.basename(path)
+        self.readdir(path, 0)
+        print self.directories
+        if filename in self.directories:
+            if len(self.directories[filename]) == 0:
+                for d in self.directories:
+                    if d == path.split('/')[-2] and filename in self.directories[d]:
+                        self.gn.erase(path, folder = True)
+                        deldir = True
+                        self.directories[path.split('/')[-2]].remove(filename)
+                if deldir:
+                    del self.directories[filename]
+            else:
+                return -errno.ENOTEMPTY
+        else:
+            return -errno.ENOENT
         return 0
 
     def rename(self, pathfrom, pathto):

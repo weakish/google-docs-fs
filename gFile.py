@@ -337,13 +337,6 @@ class GFile(fuse.Fuse):
             if time.time() - self.time_accessed[t] > 300:
                 os.remove(t)
 
-    def truncate(self, path, size):
-        print "truncate"
-        return 0
-
-    def utime(self, path, times):
-        return 0
-
     def mkdir(self, path, mode):
         """
         Purpose: Make a directory

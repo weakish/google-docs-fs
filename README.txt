@@ -1,4 +1,15 @@
 README
+Scott C. Walton
+http://code.google.com/p/google-docs-fs
+
+-------------------
+SYSTEM REQUIREMENTS
+-------------------
+
+Python 2.5
+gdata-python-client-1.3.0
+python-fuse-0.2
+Links to these can be found in the OnlineManual in the Wiki.
 
 -----
 LINUX

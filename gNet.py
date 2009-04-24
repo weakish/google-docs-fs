@@ -67,9 +67,12 @@ class GNet(object):
         Returns: The gdata List Entry object containing the file or -1 if none exists
         """
         import os
+        print path
+        name = os.path.basename(path)
+        title = name.split('.')[0]
         pe = path.split('/')
         query = gdata.docs.service.DocumentQuery()
-        query['title'] = os.path.basename(path)[:-4]
+        query['title'] = title
         query['title-exact'] = 'true'
         query['showfolders'] = showfolders
 
@@ -78,7 +81,7 @@ class GNet(object):
         filter = []
         # Filter out any files that don't match the case
         for f in feed.entry:
-            if f.title.text.encode('UTF-8') == os.path.basename(path)[:-4]:
+            if f.title.text.encode('UTF-8') == title:
                 filter.append(f)
         print "Getting filter works!"
         print filter
@@ -100,11 +103,15 @@ class GNet(object):
             #    return entry
         #raise IOError, 'File not on Google Docs'
 
-    def erase(self, file):
+    def erase(self, path, folder = False):
         """
         Purpose: Erase a file
-        file: A gdata entry object containing the file to erase
+        path: String containing path to the file to erase
         """
+        if folder is True:
+            file = self.get_filename(path, showfolders = 'true')
+        else:
+            file = self.get_filename(path)
         self.gd_client.Delete(file.GetEditLink().href)
         ## TODO: Check file exists on server
         ## TODO: Test Me!
@@ -225,6 +232,8 @@ class GNet(object):
         pe = path.split('/')[1:]
         if len(pe) == 1:
             self.gd_client.CreateFolder(pe[-1])
+        else:
+            self.gd_client.CreateFolder(pe[-1], self.get_filename(pe[-2]))
             ##TODO: FINISH
 
     def _get_info(self, path):

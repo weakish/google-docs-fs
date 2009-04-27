@@ -26,6 +26,7 @@ import errno
 import time
 import fuse
 import gNet
+import getpass
 
 from subprocess import *
 
@@ -95,6 +96,7 @@ class GFile(fuse.Fuse):
         self.written = {}
         self.time_accessed = {}
         self.to_upload = {}
+        self.special_patterns = ['~lock', 'DS_Store']
 
 
     def getattr(self, path):
@@ -133,6 +135,10 @@ class GFile(fuse.Fuse):
         dirents = ['.', '..']
         pe = path.split('/')[1:]
 
+        ## Mac OS X Compatibility
+        if platform.system() == 'Darwin':
+            dirents.extend(('._.', '.DS_Store'))
+            
         if path == '/': # Root
             excludes = []
             self.directories[''] = []
@@ -144,7 +150,7 @@ class GFile(fuse.Fuse):
             if len(excludes) > 0:
                 feed = self.gn.get_docs(filetypes = excludes)
             else:
-                feed = self.gn.get_docs() # All in root folder
+                feed = self.gn.get_docs() # All must in root folder
                 
             for file in feed.entry:
                 if file.GetDocumentType() == 'folder':
@@ -474,7 +480,11 @@ def main():
     usage = """Google Docs FS: Mounts Google Docs files on a local
     filesystem gFile.py email password mountpoint""" + fuse.Fuse.fusage
 
-    gfs = GFile(sys.argv[1], sys.argv[2], version = "%prog " + fuse.__version__,
+    passwd = None
+    while not passwd:
+        passwd = getpass.getpass()
+        
+    gfs = GFile(sys.argv[1], passwd, version = "%prog " + fuse.__version__,
         usage = usage, dash_s_do='setsingle')
     gfs.parse(errex=1)
     gfs.main()

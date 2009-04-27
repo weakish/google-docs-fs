@@ -1,12 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 
 if [ $# -ne 2 ]
 	then
 	echo "Usage: gmount [mountpoint] [googlemail]"
 else
-	echo "Enter password for " $2 ":"
-	read -s pass
-    ./"gFile.py" $2 $pass $1
+    ./"gFile.py" $2 $1
         
 fi
 

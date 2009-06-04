@@ -231,14 +231,12 @@ class GFile(fuse.Fuse):
         else: # Assume that it was passed from self.read()
             f = flags
         print "Flag is: ", f
-        if f != 'w': # Download only when you want to read the file
-            if not os.path.exists('/tmp/google-docs-fs/' + os.path.basename(path)):
-                file = self.gn.get_file(path, f)
-            else:
-                file = open('/tmp/google-docs-fs/' + os.path.basename(path), f)
+        if not os.path.exists('/tmp/google-docs-fs/' + os.path.basename(path)):
+            file = self.gn.get_file(path, f)
         else:
-            print os.path.basename(path)
             file = open('/tmp/google-docs-fs/' + os.path.basename(path), f)
+        print os.path.basename(path)
+        file = open('/tmp/google-docs-fs/' + os.path.basename(path), f)
                             
         print self.files
         print file

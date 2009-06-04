@@ -194,10 +194,12 @@ class GFile(fuse.Fuse):
         print "----\nMKNOD\n----"
         filename = os.path.basename(path)
         print filename
-        self.to_upload[path] = True
+        if filename[0] != '.':
+            self.to_upload[path] = True
+        else:
+            os.mknod('/tmp/google-docs-fs/%s' % (filename, ), 0644)
         print self.to_upload
-        self.files[filename] = GStat()
-        print self.files
+        self._setattr(name = filename)
         self.files[filename].set_file_attr(0)
         self.directories[path.split('/')[-2]].append(filename)
         print self.directories
@@ -254,14 +256,16 @@ class GFile(fuse.Fuse):
         """
 
         print "------\nWRITE\n------"
-        tmp_path = ('/tmp/google-docs-fs/' + os.path.basename(path))
+        filename = os.path.basename(path)
+        tmp_path = ('/tmp/google-docs-fs/' + filename)
         if fh is None:
             fh = open(tmp_path, 'wb')
         fh.seek(offset)
         print "-- OFFSET ", offset, " --"
         print "BUFFER:", len(buf)
         fh.write(buf)
-        self.written[tmp_path] = True
+        if filename[0] != '.':
+            self.written[tmp_path] = True
         self.time_accessed[tmp_path] = time.time()
         self.time_accessed[tmp_path] = time.time()
         print self.time_accessed
@@ -285,6 +289,16 @@ class GFile(fuse.Fuse):
         path: String containing relative path to file using mountpoint as /
         """
         filename = os.path.basename(path)
+        if filename[0] == '.':
+            tmp_path = '/tmp/google-docs-fs/%s' % (filename, )
+            if os.path.exists(tmp_path):
+                if os.path.isdir(tmp_path):
+                    return -errno.EISDIR
+                    
+                os.remove(tmp_path)
+                return 0
+            else:
+                return -errno.ENOENT
         if filename in self.directories:
             for d in self.directories:
                 if filename in d and path.split('/')[-2] == d:
@@ -294,7 +308,6 @@ class GFile(fuse.Fuse):
             self.gn.erase(path)
         except AttributeError, e:
             return -errno.ENOENT
-        # TODO: Finish Me! ?
 
     def read(self, path, size = -1, offset = 0, fh = None):
         """
@@ -414,37 +427,44 @@ class GFile(fuse.Fuse):
             
         return 0
 
-    def _setattr(self, entry):
+    def _setattr(self, entry = None, name = None, file = True):
         """
         Purpose: Set the getattr information for entry
         entry: DocumentListEntry object to extract data from
+        name: String name of file to set attributes for
+        file: Boolean only effected if name is passed - set to false if
+            setting attributes of a folder
         """
-        f = entry.title.text.encode('UTF-8')
+        assert(entry or name)
+        
+        if entry:
+            f = entry.title.text.encode('UTF-8')
 
-        if entry.GetDocumentType() == 'folder':
-            self.files[f] = GStat()
+            if entry.GetDocumentType() == 'folder':
+                self.files[f] = GStat()
 
-        else: #File
-            f = '%s.%s' % (f, self._file_extension(entry))
-            self.files[f] = GStat()
-            self.files[f].set_file_attr(len(f)) # TODO: try and change len(f) to the actual size
+            else: #File
+                f = '%s.%s' % (f, self._file_extension(entry))
+                self.files[f] = GStat()
+                self.files[f].set_file_attr(len(f)) # TODO: try and change len(f) to the actual size
+    
+            #Set times
+            if entry.lastViewed is None:
+                self.files[f].set_access_times(self._time_convert(entry.updated.text.encode('UTF-8')),
+                                            self._time_convert(entry.published.text.encode('UTF-8')))
 
-        #Set times
-        if entry.lastViewed is None:
-            self.files[f].set_access_times(self._time_convert(entry.updated.text.encode('UTF-8')),
-                                       self._time_convert(entry.published.text.encode('UTF-8')))
+            else:
+                self.files[f].set_access_times(self._time_convert(entry.updated.text.encode('UTF-8')),
+                                            self._time_convert(entry.published.text.encode('UTF-8')),
+                                            self._time_convert(entry.lastViewed.text.encode('UTF-8')))
 
         else:
-            self.files[f].set_access_times(self._time_convert(entry.updated.text.encode('UTF-8')),
-                                       self._time_convert(entry.published.text.encode('UTF-8')),
-                                       self._time_convert(entry.lastViewed.text.encode('UTF-8')))
-
-        # Get File sizes
-        if os.path.exists('/tmp/google-docs-fs/' + f):
-            self.files[f].st_size = os.path.getsize('/tmp/google-docs-fs/' + f)
-
-
-
+            f = name
+            self.files[f] = GStat()
+            if file:
+                self.files[f].set_file_attr(len(f))
+            print f
+            print self.files[f]
 
     def _time_convert(self, t):
         """

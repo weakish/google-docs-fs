@@ -50,7 +50,6 @@ class GNet(object):
         folder: A String containing the folder to search in
         Returns: A List of documents specified by filetypes: Type gdata.docs.DocumentListFeed
         """
-
         query = gdata.docs.service.DocumentQuery(categories = filetypes)
         query['showfolders'] = 'true'
 
@@ -72,7 +71,7 @@ class GNet(object):
         title = name.split('.')[0]
         pe = path.split('/')
         query = gdata.docs.service.DocumentQuery()
-        query['title'] = title
+        query['title'] = title.encode('utf-8')
         query['title-exact'] = 'true'
         query['showfolders'] = showfolders
 
@@ -81,7 +80,7 @@ class GNet(object):
         filter = []
         # Filter out any files that don't match the case
         for f in feed.entry:
-            if f.title.text.encode('UTF-8') == title:
+            if f.title.text.decode('utf-8') == title:
                 filter.append(f)
         print "Getting filter works!"
         print filter
@@ -164,7 +163,7 @@ class GNet(object):
 
     def get_file(self, path, flags):
         """
-        Purpose: Get the file referred to by file off Google Docs.
+        Purpose: Get the file referred to by path off Google Docs.
         path: A string containing the path to the file to download
         flags: A string giving the flags to open the file with
         Returns: The file requested, or -1 if the file doesn't exist
@@ -173,7 +172,7 @@ class GNet(object):
         # Create the temporary files folder if necessary
         if not os.path.isdir('/tmp/google-docs-fs'):
             os.mkdir('/tmp/google-docs-fs')
-        tmp_path = "%s/%s" % ('/tmp/google-docs-fs', os.path.basename(path))
+        tmp_path = u"%s/%s" % (u'/tmp/google-docs-fs', os.path.basename(path))
         
         file = self.get_filename(path)
         ## Must be a new file
@@ -205,7 +204,9 @@ class GNet(object):
             self.gd_client.DownloadPresentation(file.resourceId.text, tmp_path)
         if filetype == 'document':
             print "Downloading Document"
-            self.gd_client.DownloadDocument(file.resourceId.text, tmp_path)
+            print file.resourceId.text
+            print repr(tmp_path)
+            self.gd_client.DownloadDocument(file.resourceId.text, tmp_path.encode('utf-8'))
 
         return open(tmp_path, flags)
 

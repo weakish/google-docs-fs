@@ -106,7 +106,7 @@ class GFile(fuse.Fuse):
         Returns: a GStat object with some updated values
         """
 
-        filename = os.path.basename(path)
+        filename = unicode(os.path.basename(path), 'utf-8')
         self.files[''] = GStat()
         if filename in self.files:
             st = self.files[filename]
@@ -133,30 +133,37 @@ class GFile(fuse.Fuse):
         """
 
         dirents = ['.', '..']
+        path = unicode(path).decode('utf-8')
         pe = path.split('/')[1:]
 
         ## Mac OS X Compatibility
-        if platform.system() == 'Darwin':
-            dirents.extend(('._.', '.DS_Store'))
+        if platform.system() == u'Darwin':
+            dirents.extend((u'._.', u'.DS_Store'))
             
         if path == '/': # Root
             excludes = []
             self.directories[''] = []
             feed = self.gn.get_docs(filetypes = ['folder'])
-            print feed
+            print "FEED: ", feed
             for dir in feed.entry:
-                excludes.append('-' + dir.title.text.encode('UTF-8'))
-                self.directories[dir.title.text.encode('UTF-8')] = []
+                excludes.append('-' + dir.title.text.decode('utf-8'))
+                self.directories[dir.title.text.decode('utf-8')] = []
             if len(excludes) > 0:
+                i = 0
+                print excludes
+                while i < len(excludes):
+                    excludes[i] = excludes[i].encode('utf-8')
+                    i += 1
+                print excludes
                 feed = self.gn.get_docs(filetypes = excludes)
             else:
                 feed = self.gn.get_docs() # All must in root folder
                 
             for file in feed.entry:
                 if file.GetDocumentType() == 'folder':
-                    self.directories[''].append(file.title.text.encode('UTF-8'))
+                    self.directories[''].append(file.title.text.decode('utf-8'))
                 else:
-                    self.directories[''].append('%s.%s' % (file.title.text.encode('UTF-8'), self._file_extension(file)))
+                    self.directories[''].append("%s.%s" % (file.title.text.decode("utf-8"), self._file_extension(file)))
             
             print excludes
             
@@ -166,10 +173,10 @@ class GFile(fuse.Fuse):
             print feed
             for file in feed.entry:
                 if file.GetDocumentType() == 'folder':
-                    self.directories[file.title.text.encode('UTF-8')]
-                    self.directories[pe[-1]].append(file.title.text.encode('UTF-8'))
+                    self.directories[file.title.text.decode('utf-8')]
+                    self.directories[pe[-1]].append(file.title.text.decode('utf-8'))
                 else:
-                    self.directories[pe[-1]].append('%s.%s' % (file.title.text.encode('UTF-8'), self._file_extension(file)))
+                    self.directories[pe[-1]].append("%s.%s" % (file.title.text.decode("utf-8"), self._file_extension(file)))
         for entry in self.directories[pe[-1]]:
             dirents.append(entry)
             
@@ -180,7 +187,7 @@ class GFile(fuse.Fuse):
             self._setattr(file)
 
         for r in dirents:
-            yield fuse.Direntry(r)
+            yield fuse.Direntry(r.encode('utf-8'))
 
     def mknod(self, path, mode, dev):
         """
@@ -192,12 +199,13 @@ class GFile(fuse.Fuse):
         """
         ## TODO: Might see if I can get away with not implementing this
         print "----\nMKNOD\n----"
+        path = unicode(path, 'utf-8')
         filename = os.path.basename(path)
         print filename
         if filename[0] != '.':
             self.to_upload[path] = True
         else:
-            os.mknod('/tmp/google-docs-fs/%s' % (filename, ), 0644)
+            os.mknod('/tmp/google-docs-fs/%s' % (filename.encode('utf-8'), ), 0644)
         print self.to_upload
         self._setattr(name = filename)
         self.files[filename].set_file_attr(0)
@@ -213,6 +221,7 @@ class GFile(fuse.Fuse):
         Returns: Pointer to file
         """
 
+        path = unicode(path, 'utf-8')
         ## I think that's all of them. The others are just different
         ## ways of representing the one defined here
         ## TODO: Rewrite this so the file isn't downloaded on write
@@ -254,10 +263,11 @@ class GFile(fuse.Fuse):
         """
 
         print "------\nWRITE\n------"
+        path = unicode(path, 'utf-8')
         filename = os.path.basename(path)
         tmp_path = ('/tmp/google-docs-fs/' + filename)
         if fh is None:
-            fh = open(tmp_path, 'wb')
+            fh = open(tmp_path.encode('utf-8'), 'wb')
         fh.seek(offset)
         print "-- OFFSET ", offset, " --"
         print "BUFFER:", len(buf)
@@ -277,6 +287,7 @@ class GFile(fuse.Fuse):
         fh: File Handle
         """
         print "---\nFlush\n---"
+        path = unicode(path, 'utf-8')
         print fh
         if fh is not None:
             fh.close()
@@ -286,21 +297,22 @@ class GFile(fuse.Fuse):
         Purpose: Remove a file
         path: String containing relative path to file using mountpoint as /
         """
+        path = unicode(path, 'utf-8')
         filename = os.path.basename(path)
         if filename[0] == '.':
-            tmp_path = '/tmp/google-docs-fs/%s' % (filename, )
-            if os.path.exists(tmp_path):
-                if os.path.isdir(tmp_path):
+            tmp_path = u'/tmp/google-docs-fs/%s' % (filename, )
+            if os.path.exists(tmp_path.encode('utf-8')):
+                if os.path.isdir(tmp_path.encode('utf-8')):
                     return -errno.EISDIR
                     
-                os.remove(tmp_path)
+                os.remove(tmp_path.encode('utf-8'))
                 return 0
             else:
                 return -errno.ENOENT
         if filename in self.directories:
             for d in self.directories:
                 if filename in d and path.split('/')[-2] == d:
-                    self.gn.erase(path)
+                    self.gn.erase(path.encode('utf-8'))
             return -errno.EISDIR
         try:
             self.gn.erase(path)
@@ -337,15 +349,16 @@ class GFile(fuse.Fuse):
         """
 
         print '------\nRELEASE\n------'
+        path = unicode(path, 'utf-8')
         tmp_path = '/tmp/google-docs-fs/' + os.path.basename(path)
 
         if path in self.to_upload and tmp_path in self.written:
-            self.gn.upload_file(path)
+            self.gn.upload_file(path.encode('utf-8'))
             del self.to_upload[path]
         
         if os.path.exists(tmp_path):
             if tmp_path in self.written:
-                self.gn.update_file_contents(path)
+                self.gn.update_file_contents(path.encode('utf-8'))
                 del self.written[tmp_path]
                         
         print self.time_accessed    
@@ -436,7 +449,7 @@ class GFile(fuse.Fuse):
         assert(entry or name)
         
         if entry:
-            f = entry.title.text.encode('UTF-8')
+            f = entry.title.text.decode('UTF-8')
 
             if entry.GetDocumentType() == 'folder':
                 self.files[f] = GStat()
@@ -448,13 +461,13 @@ class GFile(fuse.Fuse):
     
             #Set times
             if entry.lastViewed is None:
-                self.files[f].set_access_times(self._time_convert(entry.updated.text.encode('UTF-8')),
-                                            self._time_convert(entry.published.text.encode('UTF-8')))
+                self.files[f].set_access_times(self._time_convert(entry.updated.text.decode('UTF-8')),
+                                            self._time_convert(entry.published.text.decode('UTF-8')))
 
             else:
-                self.files[f].set_access_times(self._time_convert(entry.updated.text.encode('UTF-8')),
-                                            self._time_convert(entry.published.text.encode('UTF-8')),
-                                            self._time_convert(entry.lastViewed.text.encode('UTF-8')))
+                self.files[f].set_access_times(self._time_convert(entry.updated.text.decode('UTF-8')),
+                                            self._time_convert(entry.published.text.decode('UTF-8')),
+                                            self._time_convert(entry.lastViewed.text.decode('UTF-8')))
 
         else:
             f = name

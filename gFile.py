@@ -312,7 +312,7 @@ class GFile(fuse.Fuse):
         if filename in self.directories:
             for d in self.directories:
                 if filename in d and path.split('/')[-2] == d:
-                    self.gn.erase(path.encode('utf-8'))
+                    self.gn.erase(path)
             return -errno.EISDIR
         try:
             self.gn.erase(path)
@@ -353,12 +353,12 @@ class GFile(fuse.Fuse):
         tmp_path = '/tmp/google-docs-fs/' + os.path.basename(path)
 
         if path in self.to_upload and tmp_path in self.written:
-            self.gn.upload_file(path.encode('utf-8'))
+            self.gn.upload_file(path)
             del self.to_upload[path]
         
         if os.path.exists(tmp_path):
             if tmp_path in self.written:
-                self.gn.update_file_contents(path.encode('utf-8'))
+                self.gn.update_file_contents(path)
                 del self.written[tmp_path]
                         
         print self.time_accessed    
@@ -423,6 +423,8 @@ class GFile(fuse.Fuse):
         """
         print "rename"
         
+        pathfrom = unicode(pathfrom, 'utf-8')
+        pathto = unicode(pathto, 'utf-8')
         pef = pathfrom.split('/')
         pet = pathto.split('/')
         

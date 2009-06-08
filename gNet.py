@@ -69,6 +69,7 @@ class GNet(object):
         print path
         name = os.path.basename(path)
         title = name.split('.')[0]
+        print repr(title)
         pe = path.split('/')
         query = gdata.docs.service.DocumentQuery()
         query['title'] = title.encode('utf-8')

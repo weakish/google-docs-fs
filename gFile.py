@@ -97,6 +97,7 @@ class GFile(fuse.Fuse):
         self.time_accessed = {}
         self.to_upload = {}
         self.special_patterns = ['~lock', 'DS_Store']
+        self.home = unicode('%s/.google-docs-fs/' % (os.path.expanduser('~'),), 'utf-8')
 
 
     def getattr(self, path):
@@ -106,13 +107,15 @@ class GFile(fuse.Fuse):
         Returns: a GStat object with some updated values
         """
 
-        filename = unicode(os.path.basename(path), 'utf-8')
+        path = unicode(path, 'utf-8')
+        filename = os.path.basename(path)
         self.files[''] = GStat()
         if filename in self.files:
             st = self.files[filename]
         else:
             return -errno.ENOENT
         # Set proper attributes for files and directories
+        print filename
         if path == '/': # Root
             pass
         elif filename in self.directories: # Is a directory
@@ -133,7 +136,7 @@ class GFile(fuse.Fuse):
         """
 
         dirents = ['.', '..']
-        path = unicode(path).decode('utf-8')
+        path = unicode(path, 'utf-8')
         pe = path.split('/')[1:]
 
         ## Mac OS X Compatibility
@@ -205,7 +208,7 @@ class GFile(fuse.Fuse):
         if filename[0] != '.':
             self.to_upload[path] = True
         else:
-            os.mknod('/tmp/google-docs-fs/%s' % (filename.encode('utf-8'), ), 0644)
+            os.mknod('%s%s' % (self.home.encode('utf-8'), filename.encode('utf-8')), 0644)
         print self.to_upload
         self._setattr(name = filename)
         self.files[filename].set_file_attr(0)
@@ -220,8 +223,9 @@ class GFile(fuse.Fuse):
         flags: String giving Read/Write/Append Flags to apply to file
         Returns: Pointer to file
         """
-
         path = unicode(path, 'utf-8')
+        filename = os.path.basename(path)
+        tmp_path = '%s%s' % (self.home, filename)
         ## I think that's all of them. The others are just different
         ## ways of representing the one defined here
         ## TODO: Rewrite this so the file isn't downloaded on write
@@ -240,16 +244,14 @@ class GFile(fuse.Fuse):
         else: # Assume that it was passed from self.read()
             f = flags
         print "Flag is: ", f
-        if not os.path.exists('/tmp/google-docs-fs/' + os.path.basename(path)):
+        if not os.path.exists(tmp_path):
             file = self.gn.get_file(path, f)
         else:
-            file = open('/tmp/google-docs-fs/' + os.path.basename(path), f)
-        print os.path.basename(path)
-        file = open('/tmp/google-docs-fs/' + os.path.basename(path), f)
+            file = open(tmp_path.encode('utf-8'), f)
                             
         print self.files
         print file
-        self.files[os.path.basename(path)].st_size = os.path.getsize('/tmp/google-docs-fs/' + os.path.basename(path))
+        self.files[filename].st_size = os.path.getsize(tmp_path.encode('utf-8'))
         return file
 
     def write(self, path, buf, offset, fh = None):
@@ -265,12 +267,13 @@ class GFile(fuse.Fuse):
         print "------\nWRITE\n------"
         path = unicode(path, 'utf-8')
         filename = os.path.basename(path)
-        tmp_path = ('/tmp/google-docs-fs/' + filename)
+        tmp_path = '%s%s' % (self.home, filename)
         if fh is None:
             fh = open(tmp_path.encode('utf-8'), 'wb')
         fh.seek(offset)
         print "-- OFFSET ", offset, " --"
         print "BUFFER:", len(buf)
+        print "TO WRITE:", buf
         fh.write(buf)
         if filename[0] != '.':
             self.written[tmp_path] = True
@@ -287,7 +290,6 @@ class GFile(fuse.Fuse):
         fh: File Handle
         """
         print "---\nFlush\n---"
-        path = unicode(path, 'utf-8')
         print fh
         if fh is not None:
             fh.close()
@@ -298,9 +300,9 @@ class GFile(fuse.Fuse):
         path: String containing relative path to file using mountpoint as /
         """
         path = unicode(path, 'utf-8')
-        filename = os.path.basename(path)
+        filename = os.path.basename(path.encode('utf-8'))
         if filename[0] == '.':
-            tmp_path = u'/tmp/google-docs-fs/%s' % (filename, )
+            tmp_path = u'%s%s' % (self.home, filename)
             if os.path.exists(tmp_path.encode('utf-8')):
                 if os.path.isdir(tmp_path.encode('utf-8')):
                     return -errno.EISDIR
@@ -328,15 +330,17 @@ class GFile(fuse.Fuse):
         fh: File to read
         Returns: Bytes read
         """
-
+        path = unicode(path, 'utf-8')
+        filename = os.path.basename(path)
+        
         ## TODO: Make me work with spreadsheets
         if fh is None:
-            fh = self.open(path, 'rb+')
-
+            fh = self.open(path.encode('utf-8'), 'rb+')
+            
         print offset
         fh.seek(offset)
         buf = fh.read(size)
-        tmp_path = '/tmp/google-docs-fs/' + os.path.basename(path)
+        tmp_path = '%s%s' % (self.home, filename)
         self.time_accessed[tmp_path] = time.time()
         return buf
 
@@ -350,10 +354,13 @@ class GFile(fuse.Fuse):
 
         print '------\nRELEASE\n------'
         path = unicode(path, 'utf-8')
-        tmp_path = '/tmp/google-docs-fs/' + os.path.basename(path)
+        filename = os.path.basename(path)
+        tmp_path = '%s%s' % (self.home, filename)
 
         if path in self.to_upload and tmp_path in self.written:
             self.gn.upload_file(path)
+            if os.path.dirname(path.encode('utf-8')) != '/':
+                self.rename('/%s' % (os.path.basename(path.encode('utf-8')), ), path.encode('utf-8'))
             del self.to_upload[path]
         
         if os.path.exists(tmp_path):
@@ -365,7 +372,7 @@ class GFile(fuse.Fuse):
         for t in self.time_accessed:
             print t
             if time.time() - self.time_accessed[t] > 300:
-                os.remove(t)
+                os.remove(t.encode('utf-8'))
 
     def mkdir(self, path, mode):
         """
@@ -375,17 +382,18 @@ class GFile(fuse.Fuse):
         """
         print "mkdir"
         print path.split('/')
-        name = os.path.basename(path)
-        if name in self.directories:
-            if name in self.directories[path.split('/')[-2]]:
+        path = unicode(path, 'utf-8')
+        filename = os.path.basename(path)
+        if filename in self.directories:
+            if filename in self.directories[path.split('/')[-2]]:
                 return -errno.EEXIST
         try:
-            self.directories[path.split('/')[-2]].append(name)
+            self.directories[path.split('/')[-2]].append(filename)
         except KeyError:
             return -errno.ENOENT
 
         self.gn.make_folder(path)
-        self.directories[name] = []
+        self.directories[filename] = []
         self._setattr(self.gn.get_filename(path, showfolders = 'true'))
         print self.directories
         print self.files
@@ -397,6 +405,7 @@ class GFile(fuse.Fuse):
         Purpose: Remove a directory referenced by path
         path: String containing path to directory to remove
         """
+        path = unicode(path, 'utf-8')
         filename = os.path.basename(path)
         self.readdir(path, 0)
         print self.directories

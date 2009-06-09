@@ -42,6 +42,8 @@ class GNet(object):
         self.gd_client.password = pw
         self.gd_client.source = 'google-docs-fs'
         self.gd_client.ProgrammaticLogin()
+        self.home = unicode('%s/.google-docs-fs/' % (os.path.expanduser('~'),), 'utf-8')
+
 
     def get_docs(self, filetypes = None, folder = None):
         """
@@ -54,7 +56,7 @@ class GNet(object):
         query['showfolders'] = 'true'
 
         if folder is not None:
-            query['folder'] = folder
+            query['folder'] = folder.encode('utf-8')
 
         return self.gd_client.Query(query.ToUri())
 
@@ -94,10 +96,18 @@ class GNet(object):
         # essential to ensure the user doesnt unwittingly erase a
         # random file stored elsewhere
         for entry in filter:
-            if pe[-2] is '' and len(entry.category) is 1:
+            print entry
+            print dir(entry)
+            print entry.category
+            print entry.source
+            ## Assume that if there's only 1 then it's the correct one.
+            if pe[-2] == '' or len(entry.category) is 1:
                 return entry
+            ## This doesn't seem to work any more
             for c in entry.category:
-                if pe[-2] in c.label:
+                print c.label
+                print pe[-2]
+                if pe[-2].encode('utf-8') in c.label:
                     return entry
             #elif path[-2] in (entry.category[0].label, entry.category[1].label):
             #    return entry
@@ -126,16 +136,16 @@ class GNet(object):
         else:
             folder = None
 
-        name, title, type, mime = self._get_info(path)
+        filename, title, type, mime = self._get_info(path)
         
         print path
         print folder
-        print name
+        print filename
         print title
         print type
         print mime
 
-        media = MediaSource(file_path = ('/tmp/google-docs-fs/' + name), content_type = mime)
+        media = MediaSource(file_path = '%s%s' % (self.home.encode('utf-8'), filename.encode('utf-8')), content_type = mime)
 
         if type in ['CSV', 'ODS', 'XLS']:
             self.gd_client.UploadSpreadsheet(media, title)
@@ -170,19 +180,16 @@ class GNet(object):
         Returns: The file requested, or -1 if the file doesn't exist
         """
 
-        # Create the temporary files folder if necessary
-        if not os.path.isdir('/tmp/google-docs-fs'):
-            os.mkdir('/tmp/google-docs-fs')
-        tmp_path = u"%s/%s" % (u'/tmp/google-docs-fs', os.path.basename(path))
-        
+        filename = os.path.basename(path)
+        tmp_path = '%s%s' % (self.home, filename)
         file = self.get_filename(path)
-        ## Must be a new file
         
+        ## Must be a new file
         if file is None:
             import stat
             print "New file"
-            os.mknod(tmp_path, 0700 | stat.S_IFREG)
-            return open(tmp_path, flags)
+            os.mknod(tmp_path.encode('utf-8'), 0700 | stat.S_IFREG)
+            return open(tmp_path.encode('utf-8'), flags)
 
         print "\n---------\nFILENAME IS: ", file
         print "---------"
@@ -197,31 +204,34 @@ class GNet(object):
             # substitute the spreadsheets token into our gd_client
             docs_auth_token = self.gd_client.GetClientLoginToken()
             self.gd_client.SetClientLoginToken(spreadsheets_client.GetClientLoginToken())
-            self.gd_client.DownloadSpreadsheet(file.resourceId.text, tmp_path)
+            self.gd_client.DownloadSpreadsheet(file.resourceId.text, tmp_path.encode('utf-8'))
             self.gd_client.SetClientLoginToken(docs_auth_token)
 
         if filetype == 'presentation':
             print "Downloading Presentation"
-            self.gd_client.DownloadPresentation(file.resourceId.text, tmp_path)
+            self.gd_client.DownloadPresentation(file.resourceId.text, tmp_path.encode('utf-8'))
         if filetype == 'document':
             print "Downloading Document"
             print file.resourceId.text
             print repr(tmp_path)
             self.gd_client.DownloadDocument(file.resourceId.text, tmp_path.encode('utf-8'))
 
-        return open(tmp_path, flags)
+        return open(tmp_path.encode('utf-8'), flags)
 
     def update_file_contents(self, path):
         """
         Purpose: Update the contents of the file specified by path
         path: String containing path to file to update
         """
-        name, title, type, mime = self._get_info(path)
-        print name, title, type, mime
-        tmp_path = '/tmp/google-docs-fs/' + name
-        ms = gdata.MediaSource(file_path = tmp_path, content_type = mime)
+        filename, title, type, mime = self._get_info(path)
+        print "Filename:", filename
+        print "Title:", title
+        print "Type:", type
+        print "MIME:", mime
+        tmp_path = '%s%s' % (self.home, filename)
+        ms = gdata.MediaSource(file_path = tmp_path.encode('utf-8'), content_type = mime)
         entry = self.get_filename(path)
-        entry.title.text = title
+        entry.title.text = title.encode('utf-8')
         self.gd_client.Put(data = entry, uri = entry.GetEditMediaLink().href, media_source = ms)
 
     def make_folder(self, path):
@@ -231,11 +241,11 @@ class GNet(object):
         """
         if os.path.dirname(path) == '/':
             print 1
-            self.gd_client.CreateFolder(os.path.basename(path))
+            self.gd_client.CreateFolder(os.path.basename(path).encode('utf-8'))
         else:
             print 2
             parent_dir = self.get_filename(os.path.dirname(path), showfolders = 'true')
-            self.gd_client.CreateFolder(os.path.basename(path), parent_dir)
+            self.gd_client.CreateFolder(os.path.basename(path).encode('utf-8'), parent_dir)
             
     def move_file(self, pathfrom, pathto):
         """

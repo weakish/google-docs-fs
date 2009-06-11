@@ -36,6 +36,8 @@ def main():
         sys.exit(1)
     if python_version == "2.6":
         install_path = "/usr/lib/python2.6/dist-packages/google-docs-fs"
+        print "Using Python 2.6! Please read the instructions for ensuring"
+        print "compatibility with the GData Python Client"
     else:
         install_path = "/usr/lib/python%s/site-packages/google-docs-fs" % (python_version, )
     print "Installing google-docs-fs to:", install_path
@@ -67,7 +69,7 @@ else
 fi
 
 ## Create the temporary directory 
-mkdir -p /tmp/google-docs-fs""" % (install_path, )
+mkdir -p ~/.google-docs-fs""" % (install_path, )
 
     f = open('/usr/bin/gmount', 'w')
     f.write(gmount)

@@ -42,7 +42,6 @@ class GNet(object):
         self.gd_client.password = pw
         self.gd_client.source = 'google-docs-fs'
         self.gd_client.ProgrammaticLogin()
-        self.home = unicode('%s/.google-docs-fs/' % (os.path.expanduser('~'),), 'utf-8')
 
 
     def get_docs(self, filetypes = None, folder = None):
@@ -56,7 +55,7 @@ class GNet(object):
         query['showfolders'] = 'true'
 
         if folder is not None:
-            query['folder'] = folder.encode('utf-8')
+            query.AddNamedFolder(self.gd_client.email, folder.encode('utf-8'))
 
         return self.gd_client.Query(query.ToUri())
 
@@ -95,13 +94,12 @@ class GNet(object):
         # ensure the integrity of the path. May be slower but will be
         # essential to ensure the user doesnt unwittingly erase a
         # random file stored elsewhere
+        if len(filter) == 1: ## Assume it is the correct one
+            return filter[0]
         for entry in filter:
-            print entry
-            print dir(entry)
             print entry.category
-            print entry.source
             ## Assume that if there's only 1 then it's the correct one.
-            if pe[-2] == '' or len(entry.category) is 1:
+            if os.path.dirname(path) == '/' or len(entry.category) is 1:
                 return entry
             ## This doesn't seem to work any more
             for c in entry.category:
@@ -109,9 +107,7 @@ class GNet(object):
                 print pe[-2]
                 if pe[-2].encode('utf-8') in c.label:
                     return entry
-            #elif path[-2] in (entry.category[0].label, entry.category[1].label):
-            #    return entry
-
+        
     def erase(self, path, folder = False):
         """
         Purpose: Erase a file
@@ -172,7 +168,7 @@ class GNet(object):
             parent_entry = self.get_filename(parent_dir, showfolders = 'true')
             self.gd_client.CreateFolder(path[-1], parent_entry)
 
-    def get_file(self, path, flags):
+    def get_file(self, path, tmp_path, flags):
         """
         Purpose: Get the file referred to by path off Google Docs.
         path: A string containing the path to the file to download
@@ -181,7 +177,6 @@ class GNet(object):
         """
 
         filename = os.path.basename(path)
-        tmp_path = '%s%s' % (self.home, filename)
         file = self.get_filename(path)
         
         ## Must be a new file
@@ -255,27 +250,33 @@ class GNet(object):
         """
         folderto = os.path.dirname(pathto)
 
+        print pathfrom, ">", pathto
         entry_from = self.get_filename(pathfrom, showfolders = 'true')
         
         if os.path.basename(pathfrom) != os.path.basename(pathto):
             entry_from = self.rename_file(entry_from, os.path.basename(pathto))
 
+        print entry_from.title.text
+        if not self.gd_client.MoveOutOfFolder(entry_from):
+            print "Didn't work"
+            return -1
         if folderto == '/':
-            self.gd_client.MoveOutOfFolder(entry_from)
-            return
-            
-        entry_to = self.get_filename(folderto, showfolders = 'true')
-        
-        type = entry_from.GetDocumentType()
-        if type == 'folder':
-            self.gd_client.MoveFolderIntoFolder(entry_from, entry_to)
-        elif type == 'document':
-            self.gd_client.MoveDocumentIntoFolder(entry_from, entry_to)
-        elif type == 'spreadsheet':
-            self.gd_client.MoveSpreadsheetIntoFolder(entry_from, entry_to)
-        elif type == 'presentation':
-            self.gd_client.MovePresentationIntoFolder(entry_from, entry_to)
+            print "MOVING TO ROOT"
+    
+        else:    
+            entry_to = self.get_filename(folderto, showfolders = 'true')
 
+            type = entry_from.GetDocumentType()
+            if type == 'folder':
+                self.gd_client.MoveFolderIntoFolder(entry_from, entry_to)
+            elif type == 'document':
+                self.gd_client.MoveDocumentIntoFolder(entry_from, entry_to)
+            elif type == 'spreadsheet':
+                self.gd_client.MoveSpreadsheetIntoFolder(entry_from, entry_to)
+            elif type == 'presentation':
+                self.gd_client.MovePresentationIntoFolder(entry_from, entry_to)
+        return 0
+    
     def rename_file(self, entry, name_to):
         """
         Purpose: Renames an entry

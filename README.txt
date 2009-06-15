@@ -48,11 +48,9 @@ KNOWN BUGS
 
 1. For reasons I cannot fathom, presentations cannot be uploaded. If
 anyone finds that it works for them, can you please let me know?
-2. Moving files into the root directory of the file system has
-bizarre effects (usually erasing the file).
-3. Trying mkdir in anything other than the root directory doesn't
+2. Trying mkdir in anything other than the root directory doesn't
 work.
-4. Python 2.6 behaves strangely with gdata-python-client. If you
+3. Python 2.6 behaves strangely with gdata-python-client. If you
 want to use Python 2.6 then copy the files into the right place
 with the following command:
 sudo mv /usr/local/lib/python2.6/dist-packages/{atom,gdata*} /usr/lib/python2.6/dist-packages/

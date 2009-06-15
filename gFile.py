@@ -461,7 +461,8 @@ class GFile(fuse.Fuse):
             self.files[pathto] = self.files[pathfrom]
             del self.files[pathfrom]
             print self.directories[os.path.dirname(pathfrom)]
-            self.directories[os.path.dirname(pathfrom)].remove(os.path.basename(pathfrom))
+            if os.path.basename(pathfrom) in self.directories[os.path.dirname(pathfrom)]:
+                self.directories[os.path.dirname(pathfrom)].remove(os.path.basename(pathfrom))
             self.directories[os.path.dirname(pathto)].append(os.path.basename(pathto))
             
             self.gn.move_file(pathfrom, pathto)

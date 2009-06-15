@@ -248,33 +248,35 @@ class GNet(object):
         pathfrom: String containing path to file to move
         pathto: String containing path to move to
         """
+        folderfrom = os.path.dirname(pathfrom)
         folderto = os.path.dirname(pathto)
+        namefrom = os.path.basename(pathfrom)
 
         print pathfrom, ">", pathto
+        if folderfrom != '/':
+            ffe = self.get_filename(folderfrom, showfolders = 'true')
+            feed = self.gd_client.GetDocumentListFeed(ffe.content.src)
+            for entry in feed.entry:
+                if unicode(entry.title.text, 'utf-8') == namefrom[:-4]:
+                    entry_from = entry
+            self.gd_client.MoveOutOfFolder(entry_from)
+        
         entry_from = self.get_filename(pathfrom, showfolders = 'true')
+            
+        entry_to = self.get_filename(folderto, showfolders = 'true')
+        type = entry_from.GetDocumentType()
+        if type == 'folder':
+            self.gd_client.MoveFolderIntoFolder(entry_from, entry_to)
+        elif type == 'document':
+            self.gd_client.MoveDocumentIntoFolder(entry_from, entry_to)
+        elif type == 'spreadsheet':
+            self.gd_client.MoveSpreadsheetIntoFolder(entry_from, entry_to)
+        elif type == 'presentation':
+            self.gd_client.MovePresentationIntoFolder(entry_from, entry_to)
         
         if os.path.basename(pathfrom) != os.path.basename(pathto):
             entry_from = self.rename_file(entry_from, os.path.basename(pathto))
-
-        print entry_from.title.text
-        if not self.gd_client.MoveOutOfFolder(entry_from):
-            print "Didn't work"
-            return -1
-        if folderto == '/':
-            print "MOVING TO ROOT"
-    
-        else:    
-            entry_to = self.get_filename(folderto, showfolders = 'true')
-
-            type = entry_from.GetDocumentType()
-            if type == 'folder':
-                self.gd_client.MoveFolderIntoFolder(entry_from, entry_to)
-            elif type == 'document':
-                self.gd_client.MoveDocumentIntoFolder(entry_from, entry_to)
-            elif type == 'spreadsheet':
-                self.gd_client.MoveSpreadsheetIntoFolder(entry_from, entry_to)
-            elif type == 'presentation':
-                self.gd_client.MovePresentationIntoFolder(entry_from, entry_to)
+        
         return 0
     
     def rename_file(self, entry, name_to):

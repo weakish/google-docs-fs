@@ -198,6 +198,16 @@ class GFile(fuse.Fuse):
         for file in feed.entry:
             self._setattr(path = path, entry = file)
 
+        # Display all hidden files in dirents
+        tmp_path = '%s%s' % (self.home, path)
+        try:
+            os.makedirs(tmp_path.encode('utf-8'))
+        except OSError:
+            pass
+        for file in [f for f in os.listdir(tmp_path.encode('utf-8')) if f[0] == '.']:
+            dirents.append(file)
+            self._setattr(path = '%s/%s')
+            
         for r in dirents:
             yield fuse.Direntry(r.encode('utf-8'))
 
@@ -213,20 +223,23 @@ class GFile(fuse.Fuse):
         print "----\nMKNOD\n----"
         path = unicode(path, 'utf-8')
         filename = os.path.basename(path)
-        dirname = os.path.dirname(path)
+        dir = os.path.dirname(path)
+        tmp_path = '%s%s' % (self.home, path)
+        tmp_dir = '%s%s' % (self.home, dir)
+        
         print filename
         if filename[0] != '.':
             self.to_upload[path] = True
         else:
             try:
-                os.makedirs('%s%s' % (self.home.encode('utf-8'), dirname.encode('utf-8')), 0644)
+                os.makedirs(tmp_dir.encode('utf-8'), 0644)
             except OSError:
                 pass #Assume that it already exists
-            os.mknod('%s%s' % (self.home.encode('utf-8'), path.encode('utf-8')), 0644)
+            os.mknod(tmp_path.encode('utf-8'), 0644)
         print self.to_upload
         self._setattr(path = path)
         self.files[path].set_file_attr(0)
-        self.directories[os.path.dirname(path)].append(filename)
+        self.directories[dir].append(filename)
         print self.directories
         return 0
 

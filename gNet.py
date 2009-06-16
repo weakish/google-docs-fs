@@ -126,22 +126,10 @@ class GNet(object):
         Purpose: Uploads a file to Google Docs
         path: String containing path of the file to be uploaded
         """
+        mime = gdata.docs.service.SUPPORTED_FILETYPES[path[-3:].upper()]
+        title = os.path.basename(path)[:-4]
 
-        if path.split('/')[-2] != ' ':
-            folder = path.split('/')[-2]
-        else:
-            folder = None
-
-        filename, title, type, mime = self._get_info(path)
-        
-        print path
-        print folder
-        print filename
-        print title
-        print type
-        print mime
-
-        media = MediaSource(file_path = '%s%s' % (self.home.encode('utf-8'), filename.encode('utf-8')), content_type = mime)
+        media = MediaSource(file_path = path.encode('utf-8'), content_type = mime)
 
         if type in ['CSV', 'ODS', 'XLS']:
             self.gd_client.UploadSpreadsheet(media, title)
@@ -213,20 +201,16 @@ class GNet(object):
 
         return open(tmp_path.encode('utf-8'), flags)
 
-    def update_file_contents(self, path):
+    def update_file_contents(self, path, tmp_path):
         """
         Purpose: Update the contents of the file specified by path
         path: String containing path to file to update
         """
-        filename, title, type, mime = self._get_info(path)
-        print "Filename:", filename
-        print "Title:", title
-        print "Type:", type
-        print "MIME:", mime
-        tmp_path = '%s%s' % (self.home, filename)
+        mime = gdata.docs.service.SUPPORTED_FILETYPES[path[-3:].upper()]
         ms = gdata.MediaSource(file_path = tmp_path.encode('utf-8'), content_type = mime)
         entry = self.get_filename(path)
-        entry.title.text = title.encode('utf-8')
+        ## Possibly Remove
+        ## entry.title.text = os.path.basename(path)[:-4].encode('utf-8')
         self.gd_client.Put(data = entry, uri = entry.GetEditMediaLink().href, media_source = ms)
 
     def make_folder(self, path):
@@ -288,18 +272,7 @@ class GNet(object):
         """
         entry.title.text = name_to
         return self.gd_client.Put(entry, entry.GetEditLink().href)        
-        
-    def _get_info(self, path):
-        """
-        Purpose: Extracts the key parts of a file's name
-        path: String containing path to a file to get information about
-        Returns: Tuple containing (file_name, file_title, file_type.upper(), mime_type)
-        """
-        file_name = os.path.basename(path)
-        file_title = file_name[:-4]
-        file_type = file_name[-3:].upper()
-        mime_type = gdata.docs.service.SUPPORTED_FILETYPES[file_type]
-        return (file_name, file_title, file_type, mime_type)
+
 
 def main():
     """

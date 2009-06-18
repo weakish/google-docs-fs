@@ -7,9 +7,9 @@ SYSTEM REQUIREMENTS
 -------------------
 
 Python 2.5
-gdata-python-client-1.3.0
+gdata-python-client-1.3.0 or later
 python-fuse-0.2
-Links to these can be found in the OnlineManual in the Wiki.
+Links to these can be found on the home page.
 
 -----
 LINUX
@@ -46,11 +46,9 @@ fix this.
 KNOWN BUGS
 ----------
 
-1. For reasons I cannot fathom, presentations cannot be uploaded. If
-anyone finds that it works for them, can you please let me know?
-2. Trying mkdir in anything other than the root directory doesn't
+1. Trying mkdir in anything other than the root directory doesn't
 work.
-3. Python 2.6 behaves strangely with gdata-python-client. If you
+2. Python 2.6 behaves strangely with gdata-python-client. If you
 want to use Python 2.6 then copy the files into the right place
 with the following command:
 sudo mv /usr/local/lib/python2.6/dist-packages/{atom,gdata*} /usr/lib/python2.6/dist-packages/

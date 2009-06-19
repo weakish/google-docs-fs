@@ -118,16 +118,6 @@ class GFile(fuse.Fuse):
             st = self.files[path]
         else:
             return -errno.ENOENT
-        # Set proper attributes for files and directories
-        print filename
-        if path == '/': # Root
-            pass
-        elif path in self.directories: # Is a directory
-            pass
-        elif path in self.files: # Is a file
-            pass
-        else: # Evidently, it must not exist
-            return -errno.ENOENT
 
         return st
 
@@ -219,7 +209,6 @@ class GFile(fuse.Fuse):
         dev: Ignored (for now)
         Returns: 0 to indicate succes
         """
-        ## TODO: Might see if I can get away with not implementing this
         print "----\nMKNOD\n----"
         path = unicode(path, 'utf-8')
         filename = os.path.basename(path)
@@ -312,7 +301,6 @@ class GFile(fuse.Fuse):
         self.time_accessed[path] = time.time()
         print self.time_accessed
         return len(buf)
-        ##TODO: Fix Me
 
     def flush(self, path, fh = None):
         """
@@ -361,7 +349,6 @@ class GFile(fuse.Fuse):
         path = unicode(path, 'utf-8')
         filename = os.path.basename(path)
         
-        ## TODO: Make me work with spreadsheets
         if fh is None:
             fh = self.open(path.encode('utf-8'), 'rb+')
             

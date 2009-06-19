@@ -118,8 +118,6 @@ class GNet(object):
         else:
             file = self.get_filename(path)
         self.gd_client.Delete(file.GetEditLink().href)
-        ## TODO: Check file exists on server
-        ## TODO: Test Me!
 
     def upload_file(self, path):
         """
@@ -179,7 +177,6 @@ class GNet(object):
         filetype = file.GetDocumentType()
         if filetype == 'spreadsheet':
             print "Downloading Spreadsheet"
-            ## TODO: Make this work - Taken from GData List API Documentation
             import gdata.spreadsheet.service
 
             spreadsheets_client = gdata.spreadsheet.service.SpreadsheetsService()

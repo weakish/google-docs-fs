@@ -28,7 +28,7 @@ def main():
     if len(sys.argv) == 1:
         python_version = "2.5"
     elif len(sys.argv) == 2:
-        python_version = sys.argv[2]
+        python_version = sys.argv[1]
     else:
         print "Usage: INSTALL.py"
         print "or"
@@ -38,6 +38,8 @@ def main():
         install_path = "/usr/lib/python2.6/dist-packages/google-docs-fs"
         print "Using Python 2.6! Please read the instructions for ensuring"
         print "compatibility with the GData Python Client"
+        if not os.path.isdir('/usr/lib/python2.6/dist-packages/gdata'):
+            os.system('./py-2.6.sh')
     else:
         install_path = "/usr/lib/python%s/site-packages/google-docs-fs" % (python_version, )
     print "Installing google-docs-fs to:", install_path

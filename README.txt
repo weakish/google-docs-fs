@@ -51,4 +51,4 @@ work.
 2. Python 2.6 behaves strangely with gdata-python-client. If you
 want to use Python 2.6 then copy the files into the right place
 with the following command:
-sudo mv /usr/local/lib/python2.6/dist-packages/{atom,gdata*} /usr/lib/python2.6/dist-packages/
+./py-2.6.sh

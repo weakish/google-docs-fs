@@ -2,7 +2,7 @@
 #
 #       INSTALL.py
 #
-#       Copyright 2009 Scott Walton <scott@scott-laptop>
+#       Copyright 2009 Scott Walton <d38dm8nw81k1ng@gmail.com>
 #
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by

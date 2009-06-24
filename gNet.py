@@ -67,25 +67,20 @@ class GNet(object):
                      should also retrieve folders (default: 'false')
         Returns: The gdata List Entry object containing the file or -1 if none exists
         """
-        print path
         name = os.path.basename(path)
         title = name.split('.')[0]
-        print repr(title)
         pe = path.split('/')
         query = gdata.docs.service.DocumentQuery()
         query['title'] = title.encode('utf-8')
         query['title-exact'] = 'true'
         query['showfolders'] = showfolders
 
-        print "Query works!"
         feed = self.gd_client.Query(query.ToUri())
         filter = []
         # Filter out any files that don't match the case
         for f in feed.entry:
             if f.title.text.decode('utf-8') == title:
                 filter.append(f)
-        print "Getting filter works!"
-        print filter
         # Return the first file encountered in the folder
         # Fix this to be more precise in the final version
         # Need to implement file extensions, then I should be able to
@@ -97,14 +92,11 @@ class GNet(object):
         if len(filter) == 1: ## Assume it is the correct one
             return filter[0]
         for entry in filter:
-            print entry.category
             ## Assume that if there's only 1 then it's the correct one.
             if os.path.dirname(path) == '/' or len(entry.category) is 1:
                 return entry
             ## This doesn't seem to work any more
             for c in entry.category:
-                print c.label
-                print pe[-2]
                 if pe[-2].encode('utf-8') in c.label:
                     return entry
         
@@ -168,15 +160,11 @@ class GNet(object):
         ## Must be a new file
         if file is None:
             import stat
-            print "New file"
             os.mknod(tmp_path.encode('utf-8'), 0700 | stat.S_IFREG)
             return open(tmp_path.encode('utf-8'), flags)
 
-        print "\n---------\nFILENAME IS: ", file
-        print "---------"
         filetype = file.GetDocumentType()
         if filetype == 'spreadsheet':
-            print "Downloading Spreadsheet"
             import gdata.spreadsheet.service
 
             spreadsheets_client = gdata.spreadsheet.service.SpreadsheetsService()
@@ -188,12 +176,8 @@ class GNet(object):
             self.gd_client.SetClientLoginToken(docs_auth_token)
 
         if filetype == 'presentation':
-            print "Downloading Presentation"
             self.gd_client.DownloadPresentation(file.resourceId.text, tmp_path.encode('utf-8'))
         if filetype == 'document':
-            print "Downloading Document"
-            print file.resourceId.text
-            print repr(tmp_path)
             self.gd_client.DownloadDocument(file.resourceId.text, tmp_path.encode('utf-8'))
 
         return open(tmp_path.encode('utf-8'), flags)
@@ -216,10 +200,8 @@ class GNet(object):
         path: String containing path to folder to create
         """
         if os.path.dirname(path) == '/':
-            print 1
             self.gd_client.CreateFolder(os.path.basename(path).encode('utf-8'))
         else:
-            print 2
             parent_dir = self.get_filename(os.path.dirname(path), showfolders = 'true')
             self.gd_client.CreateFolder(os.path.basename(path).encode('utf-8'), parent_dir)
             
@@ -233,7 +215,6 @@ class GNet(object):
         folderto = os.path.dirname(pathto)
         namefrom = os.path.basename(pathfrom)
 
-        print pathfrom, ">", pathto
         if folderfrom != '/':
             ffe = self.get_filename(folderfrom, showfolders = 'true')
             feed = self.gd_client.GetDocumentListFeed(ffe.content.src)

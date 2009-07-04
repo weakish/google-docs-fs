@@ -18,14 +18,14 @@
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
 
-## A Simple installation script. It's not nice, nor particularly good
-## but it installs the file system adequately and generates a remove
-## script to simplify removal of the file system
+## A Simple installation script. Creates a REMOVE script to
+## assist uninstall.
 import sys
 import os
 
 def main():
     if len(sys.argv) == 1:
+        print "Using Python 2.5"
         python_version = "2.5"
     elif len(sys.argv) == 2:
         python_version = sys.argv[1]
@@ -60,29 +60,22 @@ def main():
     outfile.close()
     
     ##Install gmount
-    gmount = """#!/bin/bash
-
-if [ $# -ne 2 ]
-	then
-	echo "Usage: gmount [mountpoint] [googlemail]"
-else
-	%s/gFile.py $2 $1
-         
-fi
-
-## Create the temporary directory 
-mkdir -p ~/.google-docs-fs""" % (install_path, )
-
-    f = open('/usr/bin/gmount', 'w')
-    f.write(gmount)
-    f.close()
+    infile = open('./gmount')
+    gmount = ''
+    for line in infile:
+        if './gFile.py $*' in line:
+            gmount += '\t%s/gFile.py $*\n' % (install_path, )
+        else:
+            gmount += line
+    outfile = open('/usr/bin/gmount', 'w')
+    outfile.write(gmount)
+    outfile.close()
 
     
     ## Create uninstall script
-    uninstall = """#!/bin/sh
-rm /usr/bin/gmount /usr/bin/gumount
-rm -r %s
-rm ./REMOVE""" % (install_path, )
+    uninstall = "#!/bin/sh\n" + \
+    'rm /usr/bin/gmount /usr/bin/gumount\n' + \
+    'rm -r %s\nrm ./REMOVE' % (install_path, )
 
     f = open('./REMOVE', 'w')
     f.write(uninstall)

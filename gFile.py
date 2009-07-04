@@ -115,7 +115,13 @@ class GFile(fuse.Fuse):
         if path in self.files:
             st = self.files[path]
         else:
-            return -errno.ENOENT
+            f = self.gn.get_filename(path, 'true') 
+            if f == -1:
+                return -errno.ENOENT
+            print self.files
+            self._setattr(path = path, entry = f)
+            print self.files
+            st = self.files[path]
 
         return st
 
@@ -175,7 +181,8 @@ class GFile(fuse.Fuse):
             
         # Set the appropriate attributes for use with getattr()
         for file in feed.entry:
-            self._setattr(path = path, entry = file)
+            p = '%s/%s' % (path, file.title.text.decode('utf-8'))
+            self._setattr(path = p, entry = file)
 
         # Display all hidden files in dirents
         tmp_path = '%s%s' % (self.home, path)
@@ -436,22 +443,17 @@ class GFile(fuse.Fuse):
     def _setattr(self, path, entry = None, file = True):
         """
         Purpose: Set the getattr information for entry
+        path: String path to file
         entry: DocumentListEntry object to extract data from
-        name: String name of file to set attributes for
-        file: Boolean only effected if name is passed - set to false if
-            setting attributes of a folder
+        file: Boolean set to false if setting attributes of a folder
         """
         
         if entry:
-            if path != '/':
-                f = '%s/%s' % (path, entry.title.text.decode('UTF-8'))
-            else:
-                f = '/%s' % (entry.title.text.decode('utf-8'), )
-
+            print path.split('/')
+            f = path
             if entry.GetDocumentType() == 'folder':
                 self.files[f] = GStat()
             else: #File
-                f = '%s.%s' % (f, self._file_extension(entry))
                 self.files[f] = GStat()
                 self.files[f].set_file_attr(len(f))
     
@@ -469,7 +471,7 @@ class GFile(fuse.Fuse):
             self.files[path] = GStat()
             if file:
                 self.files[path].set_file_attr(len(path))
-
+                
     def _time_convert(self, t):
         """
         Purpose: Converts the GData String time to UNIX Time
@@ -507,7 +509,10 @@ def main():
     passwd = None
     while not passwd:
         passwd = getpass.getpass()
-        
+    
+    #GFile expects things in the reverse order
+    sys.argv[1], sys.argv[2] = sys.argv[2], sys.argv[1]
+    
     gfs = GFile(sys.argv[1], passwd, version = "%prog " + fuse.__version__,
         usage = usage, dash_s_do='setsingle')
     gfs.parse(errex=1)

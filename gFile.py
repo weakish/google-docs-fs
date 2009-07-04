@@ -118,9 +118,7 @@ class GFile(fuse.Fuse):
             f = self.gn.get_filename(path, 'true') 
             if f == -1:
                 return -errno.ENOENT
-            print self.files
             self._setattr(path = path, entry = f)
-            print self.files
             st = self.files[path]
 
         return st
@@ -449,7 +447,6 @@ class GFile(fuse.Fuse):
         """
         
         if entry:
-            print path.split('/')
             f = path
             if entry.GetDocumentType() == 'folder':
                 self.files[f] = GStat()

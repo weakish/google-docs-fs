@@ -6,7 +6,7 @@ http://code.google.com/p/google-docs-fs
 SYSTEM REQUIREMENTS
 -------------------
 
-Python 2.5
+Python 2.5 or later
 gdata-python-client-1.3.0 or later
 python-fuse-0.2
 Links to these can be found on the home page.
@@ -38,9 +38,6 @@ file system layout).
 More pressingly, this file system does not work on Mac OS X at this
 moment in time. See Issue 3 at:
 http://code.google.com/p/google-docs-fs/issues/detail?id=3
-I will begin to rectify this on Monday 27th April, when I borrow a
-friend's Mac. Until then, sit tight and rest assured that I am going to
-fix this.
 
 ----------
 KNOWN BUGS
@@ -48,7 +45,3 @@ KNOWN BUGS
 
 1. Trying mkdir in anything other than the root directory doesn't
 work.
-2. Python 2.6 behaves strangely with gdata-python-client. If you
-want to use Python 2.6 then copy the files into the right place
-with the following command:
-./py-2.6.sh

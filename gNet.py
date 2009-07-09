@@ -65,7 +65,7 @@ class GNet(object):
         path: A String containing the path elements of the file
         showfolders: Either 'true' or 'false' - whether get_filename
                      should also retrieve folders (default: 'false')
-        Returns: The gdata List Entry object containing the file or -1 if none exists
+        Returns: The gdata List Entry object containing the file or None if none exists
         """
         name = os.path.basename(path)
         title = name.split('.')[0]

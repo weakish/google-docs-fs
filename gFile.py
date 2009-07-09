@@ -116,7 +116,7 @@ class GFile(fuse.Fuse):
             st = self.files[path]
         else:
             f = self.gn.get_filename(path, 'true') 
-            if f == -1:
+            if f is None:
                 return -errno.ENOENT
             self._setattr(path = path, entry = f)
             st = self.files[path]
@@ -130,7 +130,6 @@ class GFile(fuse.Fuse):
         offset: Included for compatibility. Does nothing
         Returns: Directory listing for ls
         """
-
         dirents = ['.', '..']
         path = unicode(path, 'utf-8')
         filename = os.path.basename(path)
@@ -373,17 +372,20 @@ class GFile(fuse.Fuse):
         mode: Ignored (for now)
         """
         path = unicode(path, 'utf-8')
-        filename = os.path.basename(path)
+        dir, filename = os.path.split(path)
+        tmp_path = '%s%s' % (self.home, path)
+        
         if path in self.directories:
             return -errno.EEXIST
-        try:
+        if dir in self.directories:
             self.directories[os.path.dirname(path)].append(filename)
-        except KeyError:
+        else:
             return -errno.ENOENT
-
+        
         self.gn.make_folder(path)
         self.directories[path] = []
-        self._setattr(self.gn.get_filename(path, showfolders = 'true'))
+        self._setattr(path, file = False)
+        os.makedirs(tmp_path.encode('utf-8'))
         
         return 0
 
@@ -393,13 +395,16 @@ class GFile(fuse.Fuse):
         path: String containing path to directory to remove
         """
         path = unicode(path, 'utf-8')
+        tmp_path = '%s%s' % (self.home, path)
         filename = os.path.basename(path)
         self.readdir(path, 0)
         if path in self.directories:
             if len(self.directories[path]) == 0: #Empty
                 self.gn.erase(path, folder = True)
                 self.directories[os.path.dirname(path)].remove(filename)
+                del self.files[path]
                 del self.directories[path]
+                os.removedirs(tmp_path.encode('utf-8'))
             else:
                 return -errno.ENOTEMPTY
         else:

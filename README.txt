@@ -31,17 +31,26 @@ The default is to attempt to install to Python 2.5.
 --------
 MAC OS X
 --------
-The INSTALL.py script was not written for Mac OS X and, as such, I can't
-guarantee that it will work. You may also need to change the mkdir line
-in gmount to another temporary directory (it may work, I don't know OS X
-file system layout).
-More pressingly, this file system does not work on Mac OS X at this
-moment in time. See Issue 3 at:
-http://code.google.com/p/google-docs-fs/issues/detail?id=3
+To install on Mac OSX do the following: 
+1. Ensure you have the Mac-specific libraries above installed.
+2. Download fuse-python.
+3. Run the following commands
+
+sudo cp /usr/local/lib/pkgconfig/fuse.pc /usr/local/lib/pkgconfig/fuse.bak
+sudo sed -i 's#-I${includedir}/fuse -D_FILE_OFFSET_BITS=64#-I${includedir}/fuse -D__FreeBSD__=10 -D_FILE_OFFSET_BITS=64#g' /usr/local/lib/pkgconfig
+sudo mv /usr/local/lib/pkgconfig/fuse.pc /usr/local/lib/pkgconfig/fuse.fix && sudo mv /usr/local/lib/pkgconfig/fuse.bak /usr/local/lib/pkgconfig/fuse.pc
+
+4. Install fuse-python and gdata-python-client
+4. Download and install the latest SVN revision of google-docs-fs
 
 ----------
 KNOWN BUGS
 ----------
 
-1. Trying mkdir in anything other than the root directory doesn't
-work.
+See the Issues page on the site listed above for the latest issues.
+
+------
+THANKS
+------
+
+Ben Samuel for his work in installing google-docs-fs on Mac OSX

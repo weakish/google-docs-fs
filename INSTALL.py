@@ -3,6 +3,7 @@
 #       INSTALL.py
 #
 #       Copyright 2009 Scott Walton <d38dm8nw81k1ng@gmail.com>
+#       Mac Compatibility provided by Ben Samuel
 #
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by
@@ -22,26 +23,16 @@
 ## assist uninstall.
 import sys
 import os
+from distutils.sysconfig import get_python_lib
 
 def main():
-    if len(sys.argv) == 1:
-        print "Using Python 2.5"
-        python_version = "2.5"
-    elif len(sys.argv) == 2:
-        python_version = sys.argv[1]
+    if len(sys.argv) != 1:
+        print "Too many arguments!"
+        sys.exit()
     else:
-        print "Usage: INSTALL.py"
-        print "or"
-        print "INSTALL.py python_version"
-        sys.exit(1)
-    if python_version == "2.6":
-        install_path = "/usr/lib/python2.6/dist-packages/google-docs-fs"
-        print "Using Python 2.6! Please read the instructions for ensuring"
-        print "compatibility with the GData Python Client"
-        if not os.path.isdir('/usr/lib/python2.6/dist-packages/gdata'):
-            os.system('./py-2.6.sh')
-    else:
-        install_path = "/usr/lib/python%s/site-packages/google-docs-fs" % (python_version, )
+        install_path = os.path.join(get_python_lib(), "google-docs-fs")
+    
+    
     print "Installing google-docs-fs to:", install_path
     if not os.path.exists(install_path):
         os.mkdir(install_path)

@@ -114,8 +114,10 @@ class GFile(fuse.Fuse):
             self.files['/'] = GStat()
         if path in self.files:
             st = self.files[path]
+        elif filename[0] == '.':
+            st = os.stat(os.path.join(self.home, path).encode('utf-8'))
         else:
-            f = self.gn.get_filename(path, 'true') 
+            f = self.gn.get_filename(path, 'true')
             if f is None:
                 return -errno.ENOENT
             self._setattr(path = path, entry = f)
@@ -134,10 +136,6 @@ class GFile(fuse.Fuse):
         path = unicode(path, 'utf-8')
         filename = os.path.basename(path)
 
-        ## Mac OS X Compatibility
-        if platform.system() == u'Darwin':
-            dirents.extend((u'._.', u'.DS_Store'))
-            
         if path == '/': # Root
             excludes = []
             self.directories['/'] = []
@@ -178,7 +176,7 @@ class GFile(fuse.Fuse):
             
         # Set the appropriate attributes for use with getattr()
         for file in feed.entry:
-            p = '%s/%s' % (path, file.title.text.decode('utf-8'))
+            p = os.path.join(path, file.title.text.decode('utf-8'))
             self._setattr(path = p, entry = file)
 
         # Display all hidden files in dirents
@@ -190,7 +188,10 @@ class GFile(fuse.Fuse):
         for file in [f for f in os.listdir(tmp_path.encode('utf-8')) if f[0] == '.']:
             dirents.append(file)
             self._setattr(path = '%s/%s')
-            
+        
+        if 'My folders' in dirents:
+            dirents.remove('My folders')
+
         for r in dirents:
             yield fuse.Direntry(r.encode('utf-8'))
 
@@ -452,20 +453,17 @@ class GFile(fuse.Fuse):
         """
         
         if entry:
-            f = path
-            if entry.GetDocumentType() == 'folder':
-                self.files[f] = GStat()
-            else: #File
-                self.files[f] = GStat()
-                self.files[f].set_file_attr(len(f))
+            self.files[path] = GStat()
+            if entry.GetDocumentType() != 'folder':
+                self.files[path].set_file_attr(len(path))
     
             #Set times
             if entry.lastViewed is None:
-                self.files[f].set_access_times(self._time_convert(entry.updated.text.decode('UTF-8')),
+                self.files[path].set_access_times(self._time_convert(entry.updated.text.decode('UTF-8')),
                                             self._time_convert(entry.published.text.decode('UTF-8')))
 
             else:
-                self.files[f].set_access_times(self._time_convert(entry.updated.text.decode('UTF-8')),
+                self.files[path].set_access_times(self._time_convert(entry.updated.text.decode('UTF-8')),
                                             self._time_convert(entry.published.text.decode('UTF-8')),
                                             self._time_convert(entry.lastViewed.text.decode('UTF-8')))
 

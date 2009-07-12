@@ -32,7 +32,7 @@ def main():
     else:
         install_path = os.path.join(get_python_lib(), "google-docs-fs")
     
-    if get_python_version == '2.6':
+    if get_python_version() == '2.6':
         if not os.path.isdir('/usr/lib/python2.6/dist-packages/gdata'):
             os.system('./py-2.6.sh')
     print "Installing google-docs-fs to:", install_path

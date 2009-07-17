@@ -42,6 +42,7 @@ class GNet(object):
         self.gd_client.password = pw
         self.gd_client.source = 'google-docs-fs'
         self.gd_client.ProgrammaticLogin()
+        self.codec = 'utf-8'
 
 
     def get_docs(self, filetypes = None, folder = None):
@@ -55,7 +56,7 @@ class GNet(object):
         query['showfolders'] = 'true'
 
         if folder is not None:
-            query.AddNamedFolder(self.gd_client.email, folder.encode('utf-8'))
+            query.AddNamedFolder(self.gd_client.email, folder.encode(self.codec))
 
         return self.gd_client.Query(query.ToUri())
 
@@ -71,7 +72,7 @@ class GNet(object):
         title = name.split('.')[0]
         pe = path.split('/')
         query = gdata.docs.service.DocumentQuery()
-        query['title'] = title.encode('utf-8')
+        query['title'] = title.encode(self.codec)
         query['title-exact'] = 'true'
         query['showfolders'] = showfolders
 
@@ -79,7 +80,7 @@ class GNet(object):
         filter = []
         # Filter out any files that don't match the case
         for f in feed.entry:
-            if f.title.text.decode('utf-8') == title:
+            if f.title.text.decode(self.codec) == title:
                 filter.append(f)
         # Return the first file encountered in the folder
         # Fix this to be more precise in the final version
@@ -97,7 +98,7 @@ class GNet(object):
                 return entry
             ## This doesn't seem to work any more
             for c in entry.category:
-                if pe[-2].encode('utf-8') in c.label:
+                if pe[-2].encode(self.codec) in c.label:
                     return entry
         
     def erase(self, path, folder = False):
@@ -119,7 +120,7 @@ class GNet(object):
         mime = gdata.docs.service.SUPPORTED_FILETYPES[path[-3:].upper()]
         title = os.path.basename(path)[:-4]
 
-        media = MediaSource(file_path = path.encode('utf-8'), content_type = mime)
+        media = MediaSource(file_path = path.encode(self.codec), content_type = mime)
 
         if type in ['CSV', 'ODS', 'XLS']:
             self.gd_client.UploadSpreadsheet(media, title)
@@ -160,8 +161,8 @@ class GNet(object):
         ## Must be a new file
         if file is None:
             import stat
-            os.mknod(tmp_path.encode('utf-8'), 0700 | stat.S_IFREG)
-            return open(tmp_path.encode('utf-8'), flags)
+            os.mknod(tmp_path.encode(self.codec), 0700 | stat.S_IFREG)
+            return open(tmp_path.encode(self.codec), flags)
 
         filetype = file.GetDocumentType()
         if filetype == 'spreadsheet':
@@ -172,15 +173,15 @@ class GNet(object):
             # substitute the spreadsheets token into our gd_client
             docs_auth_token = self.gd_client.GetClientLoginToken()
             self.gd_client.SetClientLoginToken(spreadsheets_client.GetClientLoginToken())
-            self.gd_client.DownloadSpreadsheet(file.resourceId.text, tmp_path.encode('utf-8'))
+            self.gd_client.DownloadSpreadsheet(file.resourceId.text, tmp_path.encode(self.codec))
             self.gd_client.SetClientLoginToken(docs_auth_token)
 
         if filetype == 'presentation':
-            self.gd_client.DownloadPresentation(file.resourceId.text, tmp_path.encode('utf-8'))
+            self.gd_client.DownloadPresentation(file.resourceId.text, tmp_path.encode(self.codec))
         if filetype == 'document':
-            self.gd_client.DownloadDocument(file.resourceId.text, tmp_path.encode('utf-8'))
+            self.gd_client.DownloadDocument(file.resourceId.text, tmp_path.encode(self.codec))
 
-        return open(tmp_path.encode('utf-8'), flags)
+        return open(tmp_path.encode(self.codec), flags)
 
     def update_file_contents(self, path, tmp_path):
         """
@@ -188,10 +189,8 @@ class GNet(object):
         path: String containing path to file to update
         """
         mime = gdata.docs.service.SUPPORTED_FILETYPES[path[-3:].upper()]
-        ms = gdata.MediaSource(file_path = tmp_path.encode('utf-8'), content_type = mime)
+        ms = gdata.MediaSource(file_path = tmp_path.encode(self.codec), content_type = mime)
         entry = self.get_filename(path)
-        ## Possibly Remove
-        ## entry.title.text = os.path.basename(path)[:-4].encode('utf-8')
         self.gd_client.Put(data = entry, uri = entry.GetEditMediaLink().href, media_source = ms)
 
     def make_folder(self, path):
@@ -200,10 +199,10 @@ class GNet(object):
         path: String containing path to folder to create
         """
         if os.path.dirname(path) == '/':
-            self.gd_client.CreateFolder(os.path.basename(path).encode('utf-8'))
+            self.gd_client.CreateFolder(os.path.basename(path).encode(self.codec))
         else:
             parent_dir = self.get_filename(os.path.dirname(path), showfolders = 'true')
-            self.gd_client.CreateFolder(os.path.basename(path).encode('utf-8'), parent_dir)
+            self.gd_client.CreateFolder(os.path.basename(path).encode(self.codec), parent_dir)
             
     def move_file(self, pathfrom, pathto):
         """
@@ -219,7 +218,7 @@ class GNet(object):
             ffe = self.get_filename(folderfrom, showfolders = 'true')
             feed = self.gd_client.GetDocumentListFeed(ffe.content.src)
             for entry in feed.entry:
-                if unicode(entry.title.text, 'utf-8') == namefrom[:-4]:
+                if unicode(entry.title.text, self.codec) == namefrom[:-4]:
                     entry_from = entry
             self.gd_client.MoveOutOfFolder(entry_from)
         

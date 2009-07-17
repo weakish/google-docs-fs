@@ -32,7 +32,7 @@ from subprocess import *
 
 fuse.fuse_python_api = (0,2)
 
-class GStat(object):
+class GStat(fuse.Stat):
     """
     The stat class to use for getattr
     """
@@ -58,7 +58,7 @@ class GStat(object):
         size: int the file's size in bytes
         """
         self.st_mode = stat.S_IFREG | 0744
-        self.st_nlink = 2
+        self.st_nlink = 1
         self.st_size = size
 
     def set_access_times(self, mtime, ctime, atime = None):
@@ -96,8 +96,8 @@ class GFile(fuse.Fuse):
         self.written = {}
         self.time_accessed = {}
         self.to_upload = {}
-        self.special_patterns = ['~lock', 'DS_Store']
-        self.home = unicode('%s/.google-docs-fs' % (os.path.expanduser('~'),), 'utf-8')
+        self.codec = 'utf-8'
+        self.home = unicode('%s/.google-docs-fs' % (os.path.expanduser('~'),), self.codec)
 
 
     def getattr(self, path):
@@ -107,22 +107,25 @@ class GFile(fuse.Fuse):
         Returns: a GStat object with some updated values
         """
 
-        path = unicode(path, 'utf-8')
+        path = unicode(path, self.codec)
         filename = os.path.basename(path)
+        
+        print self.files
         
         if '/' not in self.files:
             self.files['/'] = GStat()
+            
         if path in self.files:
             st = self.files[path]
         elif filename[0] == '.':
-            st = os.stat(os.path.join(self.home, path).encode('utf-8'))
+            st = os.stat(os.path.join(self.home, path).encode(self.codec))
         else:
             f = self.gn.get_filename(path, 'true')
             if f is None:
                 return -errno.ENOENT
             self._setattr(path = path, entry = f)
             st = self.files[path]
-
+        
         return st
 
     def readdir(self, path, offset):
@@ -133,7 +136,7 @@ class GFile(fuse.Fuse):
         Returns: Directory listing for ls
         """
         dirents = ['.', '..']
-        path = unicode(path, 'utf-8')
+        path = unicode(path, self.codec)
         filename = os.path.basename(path)
 
         if path == '/': # Root
@@ -141,22 +144,22 @@ class GFile(fuse.Fuse):
             self.directories['/'] = []
             feed = self.gn.get_docs(filetypes = ['folder'])
             for dir in feed.entry:
-                excludes.append('-' + dir.title.text.decode('utf-8'))
-                self.directories['%s%s' % (path, dir.title.text.decode('utf-8'))] = []
+                excludes.append('-' + dir.title.text.decode(self.codec))
+                self.directories['%s%s' % (path, dir.title.text.decode(self.codec))] = []
             if len(excludes) > 0:
                 i = 0
                 while i < len(excludes):
-                    excludes[i] = excludes[i].encode('utf-8')
+                    excludes[i] = excludes[i].encode(self.codec)
                     i += 1
                 feed = self.gn.get_docs(filetypes = excludes)
             else:
-                feed = self.gn.get_docs() # All must in root folder
+                feed = self.gn.get_docs() # All must be in root folder
                 
             for file in feed.entry:
                 if file.GetDocumentType() == 'folder':
-                    self.directories['/'].append('%s' % (file.title.text.decode('utf-8'), ))
+                    self.directories['/'].append('%s' % (file.title.text.decode(self.codec), ))
                 else:
-                    self.directories['/'].append("%s.%s" % (file.title.text.decode("utf-8"), self._file_extension(file)))
+                    self.directories['/'].append("%s.%s" % (file.title.text.decode(self.codec), self._file_extension(file)))
         
         elif filename[0] == '.': #Hidden - ignore
             pass
@@ -166,34 +169,36 @@ class GFile(fuse.Fuse):
             feed = self.gn.get_docs(folder = filename)
             for file in feed.entry:
                 if file.GetDocumentType() == 'folder':
-                    self.directories['%s/%s' % (path, file.title.text.decode('utf-8'))] = []
-                    self.directories[path].append(file.title.text.decode('utf-8'))
+                    self.directories[os.path.join(path, file.title.text.decode(self.codec))] = []
+                    self.directories[path].append(file.title.text.decode(self.codec))
                 else:
-                    self.directories[path].append("%s.%s" % (file.title.text.decode("utf-8"), self._file_extension(file)))
+                    self.directories[path].append("%s.%s" % (file.title.text.decode(self.codec), self._file_extension(file)))
         
         for entry in self.directories[path]:
             dirents.append(entry)
             
         # Set the appropriate attributes for use with getattr()
         for file in feed.entry:
-            p = os.path.join(path, file.title.text.decode('utf-8'))
+            p = os.path.join(path, file.title.text.decode(self.codec))
+            if file.GetDocumentType() != 'folder':
+                p = '%s.%s' % (p, self._file_extension(file))
             self._setattr(path = p, entry = file)
 
         # Display all hidden files in dirents
-        tmp_path = '%s%s' % (self.home, path)
+        tmp_path = os.path.join(self.home, path)
         try:
-            os.makedirs(tmp_path.encode('utf-8'))
+            os.makedirs(tmp_path.encode(self.codec))
         except OSError:
             pass
-        for file in [f for f in os.listdir(tmp_path.encode('utf-8')) if f[0] == '.']:
+        for file in [f for f in os.listdir(tmp_path.encode(self.codec)) if f[0] == '.']:
             dirents.append(file)
-            self._setattr(path = '%s/%s')
+            self._setattr(path = os.path.join(tmp_path, file))
         
         if 'My folders' in dirents:
             dirents.remove('My folders')
 
         for r in dirents:
-            yield fuse.Direntry(r.encode('utf-8'))
+            yield fuse.Direntry(r.encode(self.codec))
 
     def mknod(self, path, mode, dev):
         """
@@ -203,7 +208,7 @@ class GFile(fuse.Fuse):
         dev: Ignored (for now)
         Returns: 0 to indicate succes
         """
-        path = unicode(path, 'utf-8')
+        path = unicode(path, self.codec)
         filename = os.path.basename(path)
         dir = os.path.dirname(path)
         tmp_path = '%s%s' % (self.home, path)
@@ -213,10 +218,10 @@ class GFile(fuse.Fuse):
             self.to_upload[path] = True
         else:
             try:
-                os.makedirs(tmp_dir.encode('utf-8'), 0644)
+                os.makedirs(tmp_dir.encode(self.codec), 0644)
             except OSError:
                 pass #Assume that it already exists
-            os.mknod(tmp_path.encode('utf-8'), 0644)
+            os.mknod(tmp_path.encode(self.codec), 0644)
         self._setattr(path = path)
         self.files[path].set_file_attr(0)
         self.directories[dir].append(filename)
@@ -229,7 +234,7 @@ class GFile(fuse.Fuse):
         flags: String giving Read/Write/Append Flags to apply to file
         Returns: Pointer to file
         """
-        path = unicode(path, 'utf-8')
+        path = unicode(path, self.codec)
         filename = os.path.basename(path)
         tmp_path = '%s%s' % (self.home, path)
         ## I think that's all of them. The others are just different
@@ -255,9 +260,9 @@ class GFile(fuse.Fuse):
                 pass #Assume path exists
             file = self.gn.get_file(path, tmp_path, f)
         else:
-            file = open(tmp_path.encode('utf-8'), f)
+            file = open(tmp_path.encode(self.codec), f)
                             
-        self.files[path].st_size = os.path.getsize(tmp_path.encode('utf-8'))
+        self.files[path].st_size = os.path.getsize(tmp_path.encode(self.codec))
         return file
 
     def write(self, path, buf, offset, fh = None):
@@ -270,11 +275,11 @@ class GFile(fuse.Fuse):
         Returns: 0 to indicate success
         """
 
-        path = unicode(path, 'utf-8')
+        path = unicode(path, self.codec)
         filename = os.path.basename(path)
         tmp_path = '%s%s' % (self.home, path)
         if fh is None:
-            fh = open(tmp_path.encode('utf-8'), 'wb')
+            fh = open(tmp_path.encode(self.codec), 'wb')
         fh.seek(offset)
         fh.write(buf)
         if filename[0] != '.':
@@ -297,15 +302,15 @@ class GFile(fuse.Fuse):
         Purpose: Remove a file
         path: String containing relative path to file using mountpoint as /
         """
-        path = unicode(path, 'utf-8')
-        filename = os.path.basename(path.encode('utf-8'))
+        path = unicode(path, self.codec)
+        filename = os.path.basename(path.encode(self.codec))
         if filename[0] == '.':
             tmp_path = u'%s%s' % (self.home, path)
-            if os.path.exists(tmp_path.encode('utf-8')):
-                if os.path.isdir(tmp_path.encode('utf-8')):
+            if os.path.exists(tmp_path.encode(self.codec)):
+                if os.path.isdir(tmp_path.encode(self.codec)):
                     return -errno.EISDIR
                     
-                os.remove(tmp_path.encode('utf-8'))
+                os.remove(tmp_path.encode(self.codec))
                 return 0
             else:
                 return -errno.ENOENT
@@ -325,11 +330,11 @@ class GFile(fuse.Fuse):
         fh: File to read
         Returns: Bytes read
         """
-        path = unicode(path, 'utf-8')
+        path = unicode(path, self.codec)
         filename = os.path.basename(path)
         
         if fh is None:
-            fh = self.open(path.encode('utf-8'), 'rb+')
+            fh = self.open(path.encode(self.codec), 'rb+')
             
         fh.seek(offset)
         buf = fh.read(size)
@@ -345,14 +350,14 @@ class GFile(fuse.Fuse):
         fh: File Handle to be released
         """
 
-        path = unicode(path, 'utf-8')
+        path = unicode(path, self.codec)
         filename = os.path.basename(path)
         tmp_path = '%s%s' % (self.home, path)
 
         if path in self.to_upload and path in self.written:
             self.gn.upload_file(tmp_path)
-            if os.path.dirname(path.encode('utf-8')) != '/':
-                self.rename('/%s' % (os.path.basename(path.encode('utf-8')), ), path.encode('utf-8'))
+            if os.path.dirname(path.encode(self.codec)) != '/':
+                self.rename('/%s' % (os.path.basename(path.encode(self.codec)), ), path.encode(self.codec))
             del self.to_upload[path]
         
         if os.path.exists(tmp_path):
@@ -364,7 +369,7 @@ class GFile(fuse.Fuse):
             
         for t in self.time_accessed:
             if time.time() - self.time_accessed[t] > 300:
-                os.remove(t.encode('utf-8'))
+                os.remove(t.encode(self.codec))
 
     def mkdir(self, path, mode):
         """
@@ -372,7 +377,7 @@ class GFile(fuse.Fuse):
         path: String containing path to directory to create
         mode: Ignored (for now)
         """
-        path = unicode(path, 'utf-8')
+        path = unicode(path, self.codec)
         dir, filename = os.path.split(path)
         tmp_path = '%s%s' % (self.home, path)
         
@@ -386,7 +391,7 @@ class GFile(fuse.Fuse):
         self.gn.make_folder(path)
         self.directories[path] = []
         self._setattr(path, file = False)
-        os.makedirs(tmp_path.encode('utf-8'))
+        os.makedirs(tmp_path.encode(self.codec))
         
         return 0
 
@@ -395,7 +400,7 @@ class GFile(fuse.Fuse):
         Purpose: Remove a directory referenced by path
         path: String containing path to directory to remove
         """
-        path = unicode(path, 'utf-8')
+        path = unicode(path, self.codec)
         tmp_path = '%s%s' % (self.home, path)
         filename = os.path.basename(path)
         self.readdir(path, 0)
@@ -405,7 +410,7 @@ class GFile(fuse.Fuse):
                 self.directories[os.path.dirname(path)].remove(filename)
                 del self.files[path]
                 del self.directories[path]
-                os.removedirs(tmp_path.encode('utf-8'))
+                os.removedirs(tmp_path.encode(self.codec))
             else:
                 return -errno.ENOTEMPTY
         else:
@@ -419,8 +424,8 @@ class GFile(fuse.Fuse):
         pathto: String new file path
         """
         
-        pathfrom = unicode(pathfrom, 'utf-8')
-        pathto = unicode(pathto, 'utf-8')
+        pathfrom = unicode(pathfrom, self.codec)
+        pathto = unicode(pathto, self.codec)
         tmp_path_from = '%s%s' % (self.home, pathfrom)
         tmp_path_to = '%s%s' % (self.home, pathto)
         
@@ -429,7 +434,7 @@ class GFile(fuse.Fuse):
         elif os.path.dirname(pathfrom) == os.path.dirname(pathto):
             return -errno.ESAMEDIR
         else: ## Move the file
-            if os.path.exists(tmp_path_from.encode('utf-8')):
+            if os.path.exists(tmp_path_from.encode(self.codec)):
                 os.rename(tmp_path_from, tmp_path_to)
             if pathfrom in self.directories:
                 self.directories[pathto] = self.directories[pathfrom]
@@ -452,23 +457,22 @@ class GFile(fuse.Fuse):
         file: Boolean set to false if setting attributes of a folder
         """
         
+        self.files[path] = GStat()
         if entry:
-            self.files[path] = GStat()
             if entry.GetDocumentType() != 'folder':
                 self.files[path].set_file_attr(len(path))
     
             #Set times
             if entry.lastViewed is None:
-                self.files[path].set_access_times(self._time_convert(entry.updated.text.decode('UTF-8')),
-                                            self._time_convert(entry.published.text.decode('UTF-8')))
+                self.files[path].set_access_times(self._time_convert(entry.updated.text.decode(self.codec)),
+                                            self._time_convert(entry.published.text.decode(self.codec)))
 
             else:
-                self.files[path].set_access_times(self._time_convert(entry.updated.text.decode('UTF-8')),
-                                            self._time_convert(entry.published.text.decode('UTF-8')),
-                                            self._time_convert(entry.lastViewed.text.decode('UTF-8')))
+                self.files[path].set_access_times(self._time_convert(entry.updated.text.decode(self.codec)),
+                                            self._time_convert(entry.published.text.decode(self.codec)),
+                                            self._time_convert(entry.lastViewed.text.decode(self.codec)))
 
         else:
-            self.files[path] = GStat()
             if file:
                 self.files[path].set_file_attr(len(path))
                 

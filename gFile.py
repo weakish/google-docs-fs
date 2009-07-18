@@ -48,7 +48,7 @@ class GStat(fuse.Stat):
         self.st_uid = os.getuid()
         self.st_gid = os.getgid()
         self.st_size = 4096
-        self.st_atime = int(time.time())
+        self.st_atime = time.time()
         self.st_mtime = self.st_atime
         self.st_ctime = self.st_atime
 
@@ -70,7 +70,7 @@ class GStat(fuse.Stat):
         """
         self.st_mtime = mtime
         self.st_atime = ctime
-        if atime is not None:
+        if atime is not None and atime > 0:
             self.st_atime = atime
 
 class GFile(fuse.Fuse):
@@ -190,9 +190,11 @@ class GFile(fuse.Fuse):
             os.makedirs(tmp_path.encode(self.codec))
         except OSError:
             pass
-        for file in [f for f in os.listdir(tmp_path.encode(self.codec)) if f[0] == '.']:
-            dirents.append(file)
-            self._setattr(path = os.path.join(tmp_path, file))
+        
+        if os.path.exists(tmp_path.encode(self.codec)):
+            for file in [f for f in os.listdir(tmp_path.encode(self.codec)) if f[0] == '.']:
+                dirents.append(file)
+                self._setattr(path = os.path.join(tmp_path, file))
         
         if 'My folders' in dirents:
             dirents.remove('My folders')

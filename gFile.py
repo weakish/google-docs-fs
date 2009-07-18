@@ -109,9 +109,7 @@ class GFile(fuse.Fuse):
 
         path = unicode(path, self.codec)
         filename = os.path.basename(path)
-        
-        print self.files
-        
+                
         if '/' not in self.files:
             self.files['/'] = GStat()
             

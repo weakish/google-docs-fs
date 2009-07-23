@@ -356,11 +356,9 @@ class GFile(fuse.Fuse):
 
         if path in self.to_upload and path in self.written:
             self.gn.upload_file(tmp_path)
-            if os.path.dirname(path.encode(self.codec)) != '/':
-                self.rename('/%s' % (os.path.basename(path.encode(self.codec)), ), path.encode(self.codec))
             del self.to_upload[path]
         
-        if os.path.exists(tmp_path):
+        elif os.path.exists(tmp_path):
             if path in self.written:
                 self.gn.update_file_contents(path, tmp_path)
                 del self.written[path]

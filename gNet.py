@@ -118,16 +118,29 @@ class GNet(object):
         path: String containing path of the file to be uploaded
         """
         mime = gdata.docs.service.SUPPORTED_FILETYPES[path[-3:].upper()]
-        title = os.path.basename(path)[:-4]
-
+        filename = os.path.basename(path)
+        title = filename[:-4]
+        dir = os.path.dirname(path)
+        
         media = MediaSource(file_path = path.encode(self.codec), content_type = mime)
 
-        if type in ['CSV', 'ODS', 'XLS']:
-            self.gd_client.UploadSpreadsheet(media, title)
-        if type in ['PPT', 'PPS']:
-            self.gd_client.UploadPresentation(media, title)
+        if mime in ['CSV', 'ODS', 'XLS']:
+            entry = self.gd_client.UploadSpreadsheet(media, title)
+        if mime in ['PPT', 'PPS']:
+            entry = self.gd_client.UploadPresentation(media, title)
         else:
-            self.gd_client.UploadDocument(media, title)
+            entry = self.gd_client.UploadDocument(media, title)
+
+        if dir != '/':
+            type = entry.GetDocumentType()
+            entry_to = self.get_filename(os.path.basename(dir), showfolders = 'true')
+
+            if type == 'document':
+                self.gd_client.MoveDocumentIntoFolder(entry, entry_to)
+            elif type == 'spreadsheet':
+                self.gd_client.MoveSpreadsheetIntoFolder(entry, entry_to)
+            elif type == 'presentation':
+                self.gd_client.MovePresentationIntoFolder(entry, entry_to)
 
     def create_dir(self, path):
         """

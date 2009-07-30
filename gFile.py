@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
 #   gFile.py
 #
@@ -174,7 +175,10 @@ class GFile(fuse.Fuse):
         
         for entry in self.directories[path]:
             dirents.append(entry)
-            
+        
+	if 'My folders' in dirents:
+            dirents.remove('My folders')
+	
         # Set the appropriate attributes for use with getattr()
         for file in feed.entry:
             p = os.path.join(path, file.title.text.decode(self.codec))
@@ -183,19 +187,20 @@ class GFile(fuse.Fuse):
             self._setattr(path = p, entry = file)
 
         # Display all hidden files in dirents
-        tmp_path = os.path.join(self.home, path)
+        tmp_path = '%s%s' % (self.home, path)
         try:
             os.makedirs(tmp_path.encode(self.codec))
         except OSError:
             pass
         
+	print "HOME: ", self.home
+	print "PATH: ", path
+	print "TMP PATH: ", tmp_path
         if os.path.exists(tmp_path.encode(self.codec)):
             for file in [f for f in os.listdir(tmp_path.encode(self.codec)) if f[0] == '.']:
+	        print "FILE: ", file
                 dirents.append(file)
                 self._setattr(path = os.path.join(tmp_path, file))
-        
-        if 'My folders' in dirents:
-            dirents.remove('My folders')
 
         for r in dirents:
             yield fuse.Direntry(r.encode(self.codec))
@@ -282,10 +287,13 @@ class GFile(fuse.Fuse):
             fh = open(tmp_path.encode(self.codec), 'wb')
         fh.seek(offset)
         fh.write(buf)
+	print "PATH: ", tmp_path
+	print "OFFSET: ", offset
+	print "BUFFER: ", repr(buf)
+	print "SIZE: ", len(buf)
         if filename[0] != '.':
             self.written[path] = True
-        self.time_accessed[path] = time.time()
-        self.time_accessed[path] = time.time()
+	    self.time_accessed[path] = time.time()
         return len(buf)
 
     def flush(self, path, fh = None):

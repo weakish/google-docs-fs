@@ -117,7 +117,7 @@ class GFile(fuse.Fuse):
         if path in self.files:
             st = self.files[path]
         elif filename[0] == '.':
-            st = os.stat(os.path.join(self.home, path).encode(self.codec))
+            st = os.stat(('%s%s' % (self.home, path)).encode(self.codec))
         else:
             f = self.gn.get_filename(path, 'true')
             if f is None:
@@ -263,7 +263,10 @@ class GFile(fuse.Fuse):
                 os.makedirs(os.path.dirname(tmp_path))
             except OSError:
                 pass #Assume path exists
-            file = self.gn.get_file(path, tmp_path, f)
+	    if filename[0] != '.':
+	        file = self.gn.get_file(path, tmp_path, f)
+	    else:
+	        file = open(tmp_path.encode(self.codec), f)
         else:
             file = open(tmp_path.encode(self.codec), f)
                             

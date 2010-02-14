@@ -1,18 +1,3 @@
 #!/bin/sh
 
-## Create the temporary directory 
-mkdir -p ~/.google-docs-fs/
-
-## Mount the file system
-if [ $# -lt 2 ]
-	then
-	echo "Usage: gmount [mountpoint] [googlemail] [args]"
-	echo "Mounts a Google Docs account onto mountpoint."
-	echo "Accepts all FUSE arguments.\n"
-	echo "Arguments:"
-	echo "\t-d Print debugging output."
-	echo "\nPlease report any bugs to http://code.google.com/p/google-docs-fs/issues/list"
-else
-    ./gFile.py $*
-fi
-
+./gmount.py $*

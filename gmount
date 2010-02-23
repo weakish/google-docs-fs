@@ -1,3 +1,4 @@
 #!/bin/sh
-
-./gmount.py $*
+THIS_SCRIPT_PATH=$(readlink -f $0)
+BASE_DIR=$(dirname  $THIS_SCRIPT_PATH)
+${BASE_DIR}/gmount.py $*

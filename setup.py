@@ -6,7 +6,7 @@ from distutils.core import setup
 required = []
 
 setup(
-    name='Google Docs FS',
+    name='google-docs-fs',
     version='1.0beta5',
     description='Treat Google Docs as a local file system',
     author='Scott Walton',

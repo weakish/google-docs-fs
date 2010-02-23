@@ -14,19 +14,11 @@ Links to these can be found on the home page.
 -----
 LINUX
 -----
-To install on Linux, simply run the INSTALL.py script as root/sudo:
+To install in Linux run:
 
-su -
-<password>
-./INSTALL.py
+./setup.py install
 
-or
-
-sudo ./INSTALL.py
-
-Optionally, append your version of Python to the end of the command:
-sudo ./INSTALL.py 2.6
-The default is to attempt to install to Python 2.5.
+as root.
 
 --------
 MAC OS X
@@ -54,3 +46,4 @@ THANKS
 ------
 
 Ben Samuel for his work in installing google-docs-fs on Mac OSX
+invernizzi.l for his work on providing a Ubuntu package.

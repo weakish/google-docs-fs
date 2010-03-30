@@ -273,10 +273,10 @@ class GFile(fuse.Fuse):
                 os.makedirs(os.path.dirname(tmp_path))
             except OSError:
                 pass #Assume path exists
-	    if filename[0] != '.':
-	        file = self.gn.get_file(path, tmp_path, f)
-	    else:
-	        file = open(tmp_path.encode(self.codec), f)
+            if filename[0] != '.':
+                file = self.gn.get_file(path, tmp_path, f)
+            else:
+                file = open(tmp_path.encode(self.codec), f)
         else:
             file = open(tmp_path.encode(self.codec), f)
                             

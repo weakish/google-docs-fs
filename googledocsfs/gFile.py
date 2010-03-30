@@ -99,14 +99,14 @@ class GFile(fuse.Fuse):
         self.to_upload = {}
         self.codec = 'utf-8'
         self.home = unicode('%s/.google-docs-fs' % (os.path.expanduser('~'),), self.codec)
-        if os.uname()[0] == 'Linux':
-            self.READ = 32768
-            self.WRITE = 32769
-            self.READWRITE = 32770
-        else
+        if os.uname()[0] == 'Darwin':
             self.READ = 0
             self.WRITE = 1
             self.READWRITE = 2
+        else
+            self.READ = 32768
+            self.WRITE = 32769
+            self.READWRITE = 32770
 
         self.APPEND = 337932
         self.APPENDRW = 33794

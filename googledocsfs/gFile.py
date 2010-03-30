@@ -99,7 +99,17 @@ class GFile(fuse.Fuse):
         self.to_upload = {}
         self.codec = 'utf-8'
         self.home = unicode('%s/.google-docs-fs' % (os.path.expanduser('~'),), self.codec)
+        if os.uname()[0] == 'Linux':
+            self.READ = 32768
+            self.WRITE = 32769
+            self.READWRITE = 32770
+        else
+            self.READ = 0
+            self.WRITE = 1
+            self.READWRITE = 2
 
+        self.APPEND = 337932
+        self.APPENDRW = 33794
 
     def getattr(self, path):
         """
@@ -246,15 +256,15 @@ class GFile(fuse.Fuse):
         ## ways of representing the one defined here
         ## Buffer will just be written to a new temporary file and this
         ## will then be uploaded
-        if flags == 32768:
+        if flags == self.READ:
             f = 'r'
-        elif flags == 32769:
+        elif flags == self.WRITE:
             f = 'w'
-        elif flags == 32770:
+        elif flags == self.READWRITE:
             f = 'r+'
-        elif flags == 33793:
+        elif flags == self.APPEND:
             f = 'a'
-        elif flags == 33794:
+        elif flags == self.APPENDRW:
             f = 'a+'
         else: # Assume that it was passed from self.read()
             f = flags

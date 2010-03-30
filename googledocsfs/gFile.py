@@ -103,7 +103,7 @@ class GFile(fuse.Fuse):
             self.READ = 0
             self.WRITE = 1
             self.READWRITE = 2
-        else
+        else:
             self.READ = 32768
             self.WRITE = 32769
             self.READWRITE = 32770

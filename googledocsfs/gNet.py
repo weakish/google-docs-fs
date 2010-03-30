@@ -69,7 +69,7 @@ class GNet(object):
         Returns: The gdata List Entry object containing the file or None if none exists
         """
         name = os.path.basename(path)
-        title = name.split('.')[0]
+        title = os.path.splitext(name)[0]
         pe = path.split('/')
         query = gdata.docs.service.DocumentQuery()
         query['title'] = title.encode(self.codec)

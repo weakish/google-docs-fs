@@ -4,6 +4,7 @@
 #   gFile.py
 #
 #   Copyright 2008-2009 Scott C. Walton <d38dm8nw81k1ng@gmail.com>
+#   truncate() function written by miGlanz@gmail.com
 #
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License (version 2), as
@@ -466,6 +467,18 @@ class GFile(fuse.Fuse):
             
             self.gn.move_file(pathfrom, pathto)
             
+        return 0
+
+    def truncate(self, path, length, *args, **kwargs):
+        path = unicode(path, self.codec)
+        filename = os.path.basename(path)
+        tmp_path = '%s%s' % (self.home, path)
+        fh = open(tmp_path.encode(self.codec), 'r+')
+        fh.truncate(length)
+        fh.close()
+        if filename[0] != '.':
+            self.written[path] = True
+        self.time_accessed[path] = time.time()
         return 0
 
     def _setattr(self, path, entry = None, file = True):

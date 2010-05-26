@@ -48,3 +48,4 @@ THANKS
 Ben Samuel for his work in installing google-docs-fs on Mac OSX.
 invernizzi.l for his work on providing a Ubuntu package.
 miGlanz for writing the truncate() function, fixing Issue 6.
+mr.xiaofan.li for finding and fixing Issue 23.

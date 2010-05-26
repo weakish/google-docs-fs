@@ -204,12 +204,8 @@ class GFile(fuse.Fuse):
         except OSError:
             pass
         
-	print "HOME: ", self.home
-	print "PATH: ", path
-	print "TMP PATH: ", tmp_path
         if os.path.exists(tmp_path.encode(self.codec)):
             for file in [f for f in os.listdir(tmp_path.encode(self.codec)) if f[0] == '.']:
-	        print "FILE: ", file
                 dirents.append(file)
                 self._setattr(path = os.path.join(tmp_path, file))
 
@@ -267,8 +263,10 @@ class GFile(fuse.Fuse):
             f = 'a'
         elif flags == self.APPENDRW:
             f = 'a+'
-        else: # Assume that it was passed from self.read()
+        elif type(f) is str: # Assume that it was passed from self.read()
             f = flags
+        else:
+            f = 'a+' # Just do something to make it work ;-)
         if not os.path.exists(tmp_path):
             try:
                 os.makedirs(os.path.dirname(tmp_path))
@@ -301,10 +299,7 @@ class GFile(fuse.Fuse):
             fh = open(tmp_path.encode(self.codec), 'wb')
         fh.seek(offset)
         fh.write(buf)
-	print "PATH: ", tmp_path
-	print "OFFSET: ", offset
-	print "BUFFER: ", repr(buf)
-	print "SIZE: ", len(buf)
+	
         if filename[0] != '.':
             self.written[path] = True
 	    self.time_accessed[path] = time.time()

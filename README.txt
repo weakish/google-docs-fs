@@ -33,7 +33,7 @@ sudo sed -i 's#-I${includedir}/fuse -D_FILE_OFFSET_BITS=64#-I${includedir}/fuse 
 sudo mv /usr/local/lib/pkgconfig/fuse.pc /usr/local/lib/pkgconfig/fuse.fix && sudo mv /usr/local/lib/pkgconfig/fuse.bak /usr/local/lib/pkgconfig/fuse.pc
 
 4. Install fuse-python and gdata-python-client
-4. Download and install the latest SVN revision of google-docs-fs
+5. Download and install the latest SVN revision of google-docs-fs
 
 ----------
 KNOWN BUGS
@@ -45,5 +45,6 @@ See the Issues page on the site listed above for the latest issues.
 THANKS
 ------
 
-Ben Samuel for his work in installing google-docs-fs on Mac OSX
+Ben Samuel for his work in installing google-docs-fs on Mac OSX.
 invernizzi.l for his work on providing a Ubuntu package.
+miGlanz for writing the truncate() function, fixing Issue 6.

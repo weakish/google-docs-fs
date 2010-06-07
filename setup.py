@@ -7,7 +7,7 @@ required = []
 
 setup(
     name='google-docs-fs',
-    version='1.0beta5',
+    version='1.0rc1',
     description='Treat Google Docs as a local file system',
     author='Scott Walton',
     author_email='d38dm8nw81k1ng@gmail.com',

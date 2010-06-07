@@ -23,6 +23,7 @@
 import stat
 import os
 import sys
+import threading
 import platform
 import errno
 import time
@@ -97,6 +98,7 @@ class GFile(fuse.Fuse):
         self.files = {}
         self.written = {}
         self.time_accessed = {}
+        self.release_lock = threading.RLock()
         self.to_upload = {}
         self.codec = 'utf-8'
         self.home = unicode('%s/.google-docs-fs' % (os.path.expanduser('~'),), self.codec)
@@ -367,6 +369,7 @@ class GFile(fuse.Fuse):
         fh: File Handle to be released
         """
 
+        self.release_lock.acquire()
         path = unicode(path, self.codec)
         filename = os.path.basename(path)
         tmp_path = '%s%s' % (self.home, path)
@@ -379,12 +382,11 @@ class GFile(fuse.Fuse):
             if path in self.written:
                 self.gn.update_file_contents(path, tmp_path)
                 del self.written[path]
-        
-
             
         for t in self.time_accessed:
             if time.time() - self.time_accessed[t] > 300:
                 os.remove(t.encode(self.codec))
+        self.release_lock.release()
 
     def mkdir(self, path, mode):
         """

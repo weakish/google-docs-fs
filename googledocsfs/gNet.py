@@ -41,6 +41,7 @@ class GNet(object):
         self.gd_client.email = em
         self.gd_client.password = pw
         self.gd_client.source = 'google-docs-fs'
+        self.gd_client.ssl = True
         self.gd_client.ProgrammaticLogin()
         self.codec = 'utf-8'
 
@@ -77,11 +78,12 @@ class GNet(object):
         query['showfolders'] = showfolders
 
         feed = self.gd_client.Query(query.ToUri())
-        filter = []
+        filetype_filter = []
+     
         # Filter out any files that don't match the case
         for f in feed.entry:
             if f.title.text.decode(self.codec) == title:
-                filter.append(f)
+                filetype_filter.append(f)
         # Return the first file encountered in the folder
         # Fix this to be more precise in the final version
         # Need to implement file extensions, then I should be able to
@@ -90,9 +92,9 @@ class GNet(object):
         # ensure the integrity of the path. May be slower but will be
         # essential to ensure the user doesnt unwittingly erase a
         # random file stored elsewhere
-        if len(filter) == 1: ## Assume it is the correct one
-            return filter[0]
-        for entry in filter:
+        if len(filetype_filter) == 1: ## Assume it is the correct one
+            return filetype_filter[0]
+        for entry in filetype_filter:
             ## Assume that if there's only 1 then it's the correct one.
             if os.path.dirname(path) == '/' or len(entry.category) is 1:
                 return entry
@@ -169,15 +171,15 @@ class GNet(object):
         """
 
         filename = os.path.basename(path)
-        file = self.get_filename(path)
+        doc = self.get_filename(path)
         
-        ## Must be a new file
-        if file is None:
+        ## If doc is a new file
+        if doc is None:
             import stat
             os.mknod(tmp_path.encode(self.codec), 0700 | stat.S_IFREG)
             return open(tmp_path.encode(self.codec), flags)
 
-        filetype = file.GetDocumentType()
+        filetype = doc.GetDocumentType()
         if filetype == 'spreadsheet':
             import gdata.spreadsheet.service
 
@@ -186,13 +188,12 @@ class GNet(object):
             # substitute the spreadsheets token into our gd_client
             docs_auth_token = self.gd_client.GetClientLoginToken()
             self.gd_client.SetClientLoginToken(spreadsheets_client.GetClientLoginToken())
-            self.gd_client.DownloadSpreadsheet(file.resourceId.text, tmp_path.encode(self.codec))
+            self.gd_client.Export(doc.resourceId.text, tmp_path.encode(self.codec))
             self.gd_client.SetClientLoginToken(docs_auth_token)
 
-        if filetype == 'presentation':
-            self.gd_client.DownloadPresentation(file.resourceId.text, tmp_path.encode(self.codec))
-        if filetype == 'document':
-            self.gd_client.DownloadDocument(file.resourceId.text, tmp_path.encode(self.codec))
+        else:
+            print doc.resourceId.text
+            self.gd_client.Export(doc.resourceId.text, tmp_path.encode(self.codec))
 
         return open(tmp_path.encode(self.codec), flags)
 

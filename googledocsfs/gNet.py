@@ -42,7 +42,12 @@ class GNet(object):
         self.gd_client.password = pw
         self.gd_client.source = 'google-docs-fs'
         self.gd_client.ssl = True
-        self.gd_client.ProgrammaticLogin()
+        try:
+            self.gd_client.ProgrammaticLogin()
+        except gdata.service.BadAuthentication:
+            import sys
+            sys.stderr.write("Error: Incorrect username or password\n")
+            sys.exit(1)
         self.codec = 'utf-8'
 
 
@@ -176,7 +181,7 @@ class GNet(object):
         ## If doc is a new file
         if doc is None:
             import stat
-            os.mknod(tmp_path.encode(self.codec), 0700 | stat.S_IFREG)
+            os.mknod(tmp_path.encode(self.codec), 0o700 | stat.S_IFREG)
             return open(tmp_path.encode(self.codec), flags)
 
         filetype = doc.GetDocumentType()
@@ -192,7 +197,7 @@ class GNet(object):
             self.gd_client.SetClientLoginToken(docs_auth_token)
 
         else:
-            print doc.resourceId.text
+            print(doc.resourceId.text)
             self.gd_client.Export(doc.resourceId.text, tmp_path.encode(self.codec))
 
         return open(tmp_path.encode(self.codec), flags)
@@ -232,7 +237,7 @@ class GNet(object):
             ffe = self.get_filename(folderfrom, showfolders = 'true')
             feed = self.gd_client.GetDocumentListFeed(ffe.content.src)
             for entry in feed.entry:
-                if unicode(entry.title.text, self.codec) == namefrom[:-4]:
+                if str(entry.title.text, self.codec) == namefrom[:-4]:
                     entry_from = entry
             self.gd_client.MoveOutOfFolder(entry_from)
         

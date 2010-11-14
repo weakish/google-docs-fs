@@ -28,7 +28,7 @@ import platform
 import errno
 import time
 import fuse
-import gNet
+from . import gNet
 import getpass
 
 from subprocess import *
@@ -44,7 +44,7 @@ class GStat(fuse.Stat):
         Purpose: Sets the attributes to folder attributes
         Returns: Nothing
         """
-        self.st_mode = stat.S_IFDIR | 0744
+        self.st_mode = stat.S_IFDIR | 0o744
         self.st_ino = 0
         self.st_dev = 0
         self.st_nlink = 2
@@ -60,7 +60,7 @@ class GStat(fuse.Stat):
         Purpose: Set attributes of a file
         size: int the file's size in bytes
         """
-        self.st_mode = stat.S_IFREG | 0744
+        self.st_mode = stat.S_IFREG | 0o744
         self.st_nlink = 1
         self.st_size = size
 
@@ -101,7 +101,7 @@ class GFile(fuse.Fuse):
         self.release_lock = threading.RLock()
         self.to_upload = {}
         self.codec = 'utf-8'
-        self.home = unicode('%s/.google-docs-fs' % (os.path.expanduser('~'),), self.codec)
+        self.home = str('%s/.google-docs-fs' % (os.path.expanduser('~'),), self.codec)
         if os.uname()[0] == 'Darwin':
             self.READ = 0
             self.WRITE = 1
@@ -121,7 +121,7 @@ class GFile(fuse.Fuse):
         Returns: a GStat object with some updated values
         """
 
-        path = unicode(path, self.codec)
+        path = str(path, self.codec)
         filename = os.path.basename(path)
                 
         if '/' not in self.files:
@@ -148,7 +148,7 @@ class GFile(fuse.Fuse):
         Returns: Directory listing for ls
         """
         dirents = ['.', '..']
-        path = unicode(path, self.codec)
+        path = str(path, self.codec)
         filename = os.path.basename(path)
 
         if path == '/': # Root
@@ -222,7 +222,7 @@ class GFile(fuse.Fuse):
         dev: Ignored (for now)
         Returns: 0 to indicate succes
         """
-        path = unicode(path, self.codec)
+        path = str(path, self.codec)
         filename = os.path.basename(path)
         dir = os.path.dirname(path)
         tmp_path = '%s%s' % (self.home, path)
@@ -232,10 +232,10 @@ class GFile(fuse.Fuse):
             self.to_upload[path] = True
         else:
             try:
-                os.makedirs(tmp_dir.encode(self.codec), 0644)
+                os.makedirs(tmp_dir.encode(self.codec), 0o644)
             except OSError:
                 pass #Assume that it already exists
-            os.mknod(tmp_path.encode(self.codec), 0644)
+            os.mknod(tmp_path.encode(self.codec), 0o644)
         self._setattr(path = path)
         self.files[path].set_file_attr(0)
         self.directories[dir].append(filename)
@@ -248,7 +248,7 @@ class GFile(fuse.Fuse):
         flags: String giving Read/Write/Append Flags to apply to file
         Returns: Pointer to file
         """
-        path = unicode(path, self.codec)
+        path = str(path, self.codec)
         filename = os.path.basename(path)
         tmp_path = '%s%s' % (self.home, path)
         ## I think that's all of them. The others are just different
@@ -294,7 +294,7 @@ class GFile(fuse.Fuse):
         Returns: 0 to indicate success
         """
 
-        path = unicode(path, self.codec)
+        path = str(path, self.codec)
         filename = os.path.basename(path)
         tmp_path = '%s%s' % (self.home, path)
         if fh is None:
@@ -321,10 +321,10 @@ class GFile(fuse.Fuse):
         Purpose: Remove a file
         path: String containing relative path to file using mountpoint as /
         """
-        path = unicode(path, self.codec)
+        path = str(path, self.codec)
         filename = os.path.basename(path.encode(self.codec))
         if filename[0] == '.':
-            tmp_path = u'%s%s' % (self.home, path)
+            tmp_path = '%s%s' % (self.home, path)
             if os.path.exists(tmp_path.encode(self.codec)):
                 if os.path.isdir(tmp_path.encode(self.codec)):
                     return -errno.EISDIR
@@ -337,7 +337,7 @@ class GFile(fuse.Fuse):
             return -errno.EISDIR
         try:
             self.gn.erase(path)
-        except AttributeError, e:
+        except AttributeError as e:
             return -errno.ENOENT
 
     def read(self, path, size = -1, offset = 0, fh = None):
@@ -349,7 +349,7 @@ class GFile(fuse.Fuse):
         fh: File to read
         Returns: Bytes read
         """
-        path = unicode(path, self.codec)
+        path = str(path, self.codec)
         filename = os.path.basename(path)
         
         if fh is None:
@@ -370,7 +370,7 @@ class GFile(fuse.Fuse):
         """
 
         self.release_lock.acquire()
-        path = unicode(path, self.codec)
+        path = str(path, self.codec)
         filename = os.path.basename(path)
         tmp_path = '%s%s' % (self.home, path)
 
@@ -394,7 +394,7 @@ class GFile(fuse.Fuse):
         path: String containing path to directory to create
         mode: Ignored (for now)
         """
-        path = unicode(path, self.codec)
+        path = str(path, self.codec)
         dir, filename = os.path.split(path)
         tmp_path = '%s%s' % (self.home, path)
         
@@ -417,7 +417,7 @@ class GFile(fuse.Fuse):
         Purpose: Remove a directory referenced by path
         path: String containing path to directory to remove
         """
-        path = unicode(path, self.codec)
+        path = str(path, self.codec)
         tmp_path = '%s%s' % (self.home, path)
         filename = os.path.basename(path)
         self.readdir(path, 0)
@@ -441,8 +441,8 @@ class GFile(fuse.Fuse):
         pathto: String new file path
         """
         
-        pathfrom = unicode(pathfrom, self.codec)
-        pathto = unicode(pathto, self.codec)
+        pathfrom = str(pathfrom, self.codec)
+        pathto = str(pathto, self.codec)
         tmp_path_from = '%s%s' % (self.home, pathfrom)
         tmp_path_to = '%s%s' % (self.home, pathto)
         
@@ -467,7 +467,7 @@ class GFile(fuse.Fuse):
         return 0
 
     def truncate(self, path, length, *args, **kwargs):
-        path = unicode(path, self.codec)
+        path = str(path, self.codec)
         filename = os.path.basename(path)
         tmp_path = '%s%s' % (self.home, path)
         fh = open(tmp_path.encode(self.codec), 'r+')
